@@ -1,5 +1,7 @@
 import io
 import json
+from datetime import date
+from decimal import Decimal
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
 import db
@@ -14,6 +16,35 @@ class Handler(BaseHTTPRequestHandler):
         self.end_headers()
         self.wfile.write(corpo)
 
+    def corpo_json(self):
+        """Valida o JSON de criar/editar; devolve (data, valor, descricao) ou None."""
+        try:
+            d = json.loads(self.rfile.read(int(self.headers.get("Content-Length", 0))))
+            data, valor, desc = date.fromisoformat(d["data"]), Decimal(str(d["valor"])), str(d["descricao"]).strip()
+            assert desc and len(desc) <= 255 and valor.is_finite()
+            return data, valor, desc
+        except Exception:
+            self.responder({"erro": "Informe data, valor e descricao validos"}, 400)
+
+    def id_da_url(self):
+        prefixo = "/api/movimentacoes/"
+        if self.path.startswith(prefixo) and self.path[len(prefixo):].isdigit():
+            return int(self.path[len(prefixo):])
+        self.responder({"erro": "nao encontrado"}, 404)
+
+    def do_PUT(self):
+        id = self.id_da_url()
+        campos = id and self.corpo_json()
+        if campos:
+            ok = db.atualizar(id, *campos)
+            self.responder({"ok": True} if ok else {"erro": "Movimentacao nao existe"}, 200 if ok else 404)
+
+    def do_DELETE(self):
+        id = self.id_da_url()
+        if id:
+            ok = db.excluir(id)
+            self.responder({"ok": True} if ok else {"erro": "Movimentacao nao existe"}, 200 if ok else 404)
+
     def do_GET(self):
         if self.path != "/api/movimentacoes":
             return self.responder({"erro": "nao encontrado"}, 404)
@@ -23,6 +54,12 @@ class Handler(BaseHTTPRequestHandler):
         ])
 
     def do_POST(self):
+        if self.path == "/api/movimentacoes":
+            campos = self.corpo_json()
+            if campos:
+                db.criar(*campos)
+                self.responder({"ok": True}, 201)
+            return
         if self.path != "/api/importar":
             return self.responder({"erro": "nao encontrado"}, 404)
         corpo = self.rfile.read(int(self.headers.get("Content-Length", 0)))

@@ -1,4 +1,5 @@
 import os
+import uuid
 
 import psycopg2
 from dotenv import load_dotenv
@@ -58,6 +59,31 @@ def listar():
         linhas = cur.fetchall()
     conn.close()
     return linhas
+
+
+def _executar(sql, params):
+    conn = conectar()
+    with conn, conn.cursor() as cur:
+        cur.execute(sql, params)
+        resultado = cur.rowcount
+    conn.close()
+    return resultado
+
+
+def criar(data, valor, descricao):
+    # lancamento manual nao vem do OFX, entao ganha um fitid proprio
+    return _executar(INSERT, (data, valor, descricao, "manual-" + uuid.uuid4().hex))
+
+
+def atualizar(id, data, valor, descricao):
+    return _executar(
+        "UPDATE movimentacoes SET data_movimentacao=%s, valor=%s, descricao=%s WHERE id=%s",
+        (data, valor, descricao, id),
+    )
+
+
+def excluir(id):
+    return _executar("DELETE FROM movimentacoes WHERE id=%s", (id,))
 
 
 if __name__ == "__main__":
