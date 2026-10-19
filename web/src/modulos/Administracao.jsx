@@ -1,6 +1,8 @@
 import { useRef, useState } from "react";
 import FormMovimentacao from "../componentes/FormMovimentacao.jsx";
 import Tabela from "../componentes/Tabela.jsx";
+import Filtros from "../componentes/Filtros.jsx";
+import useFiltros from "../hooks/useFiltros.js";
 import { Girar } from "../componentes/Icones.jsx";
 import { Vazio } from "./Analise.jsx";
 import { moeda, dataCompleta } from "../format.js";
@@ -8,6 +10,7 @@ import { moeda, dataCompleta } from "../format.js";
 // gerenciar tudo: criar, editar e excluir
 export default function Administracao({ extrato }) {
   const { movs, ocupado, salvar, excluir, atualizando, destaque, saindo } = extrato;
+  const filtros = useFiltros(movs);
   const dialogoForm = useRef();
   const dialogoExcluir = useRef();
   // o dialogo fica montado ate terminar de fechar, entao guardamos o ultimo alvo
@@ -34,7 +37,10 @@ export default function Administracao({ extrato }) {
       </div>
 
       {movs.length ? (
-        <Tabela movs={movs} atualizando={atualizando} destaque={destaque} saindo={saindo} onEditar={abrirForm} onExcluir={pedirExclusao} />
+        <>
+          <Filtros filtros={filtros} total={movs.length} mostradas={filtros.ordenadas.length} />
+          <Tabela movs={filtros.ordenadas} termos={filtros.termos.incluir} aoLimpar={filtros.limpar} atualizando={atualizando} destaque={destaque} saindo={saindo} onEditar={abrirForm} onExcluir={pedirExclusao} />
+        </>
       ) : (
         <Vazio />
       )}

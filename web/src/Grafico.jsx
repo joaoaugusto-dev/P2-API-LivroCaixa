@@ -13,7 +13,10 @@ export default function Grafico({ movimentos }) {
   let acc = 0;
   const pontos = movimentos.map((m) => ({ ...m, saldo: (acc += m.valor) }));
   const t = (iso) => new Date(iso).getTime();
-  const t0 = t(pontos[0].data), t1 = t(pontos.at(-1).data);
+  // com uma data so, abre um dia para cada lado para o degrau nao virar uma linha vertical
+  const dia = 86400000;
+  const unica = pontos[0].data === pontos.at(-1).data;
+  const t0 = t(pontos[0].data) - (unica ? dia : 0), t1 = t(pontos.at(-1).data) + (unica ? dia : 0);
   const min = Math.min(0, ...pontos.map((p) => p.saldo));
   const max = Math.max(...pontos.map((p) => p.saldo));
   const x = (p) => PAD.l + ((t(p.data) - t0) / (t1 - t0 || 1)) * (W - PAD.l - PAD.r);
@@ -23,6 +26,7 @@ export default function Grafico({ movimentos }) {
   pontos.forEach((p) => {
     d += ` H${x(p)} V${y(p.saldo)}`;
   });
+  d += ` H${W - PAD.r}`; // o saldo se mantem ate o fim do periodo
   const area = `${d} V${y(0)} Z`;
 
   const mover = (e) => {

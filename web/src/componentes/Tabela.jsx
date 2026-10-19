@@ -1,31 +1,31 @@
-import { useState } from "react";
 import { Icone, lapis, lixeira } from "./Icones.jsx";
+import { sem } from "../hooks/useFiltros.js";
 import { moeda, dataCompleta } from "../format.js";
 
-const FILTROS = [["todas", "Todas"], ["entradas", "Entradas"], ["saidas", "Saídas"]];
+// marca os termos da busca dentro da descricao (ignora acento e caixa)
+function Marcado({ texto, termos }) {
+  const base = sem(texto);
+  if (!termos.length || base.length !== texto.length) return texto;
+  const marca = new Array(texto.length).fill(false);
+  for (const t of termos) {
+    for (let i = base.indexOf(t); t && i !== -1; i = base.indexOf(t, i + 1)) marca.fill(true, i, i + t.length);
+  }
+  const partes = [];
+  for (let i = 0; i < texto.length; ) {
+    let j = i;
+    while (j < texto.length && marca[j] === marca[i]) j++;
+    partes.push(marca[i] ? <mark key={i}>{texto.slice(i, j)}</mark> : texto.slice(i, j));
+    i = j;
+  }
+  return partes;
+}
 
-// lista com filtro e busca; so mostra editar/excluir se receber onEditar/onExcluir
-export default function Tabela({ movs, atualizando, destaque, saindo, onEditar, onExcluir }) {
-  const [filtro, setFiltro] = useState("todas");
-  const [busca, setBusca] = useState("");
+// lista de movimentacoes; so mostra editar/excluir se receber onEditar/onExcluir
+export default function Tabela({ movs, atualizando, destaque, saindo, onEditar, onExcluir, termos = [], aoLimpar }) {
   const acoes = onEditar || onExcluir;
-
-  const visiveis = movs.filter(
-    (m) =>
-      (filtro === "todas" || (filtro === "entradas" ? m.valor > 0 : m.valor < 0)) &&
-      m.descricao.toLowerCase().includes(busca.toLowerCase())
-  );
 
   return (
     <section className="lista" aria-busy={atualizando}>
-      <div className="barra">
-        <div className="filtros" role="group" aria-label="Filtrar por tipo" style={{ "--i": FILTROS.findIndex(([f]) => f === filtro), "--n": 3 }}>
-          {FILTROS.map(([f, nome]) => (
-            <button key={f} aria-pressed={filtro === f} onClick={() => setFiltro(f)}>{nome}</button>
-          ))}
-        </div>
-        <input type="search" placeholder="Buscar descrição" aria-label="Buscar descrição" value={busca} onChange={(e) => setBusca(e.target.value)} />
-      </div>
       <table>
         <thead>
           <tr>
@@ -34,10 +34,10 @@ export default function Tabela({ movs, atualizando, destaque, saindo, onEditar, 
           </tr>
         </thead>
         <tbody>
-          {visiveis.map((m, i) => (
+          {movs.map((m, i) => (
             <tr key={m.id} style={{ "--i": Math.min(i, 10) }} className={(saindo === m.id ? "saindo " : "") + (destaque.has(m.id) ? "destaque" : "")}>
               <td>{dataCompleta(m.data)}</td>
-              <td>{m.descricao}</td>
+              <td><Marcado texto={m.descricao} termos={termos} /></td>
               <td className={"num " + (m.valor < 0 ? "saida" : "entrada")}>{moeda(m.valor)}</td>
               {acoes && (
                 <td className="botoes">
@@ -47,7 +47,14 @@ export default function Tabela({ movs, atualizando, destaque, saindo, onEditar, 
               )}
             </tr>
           ))}
-          {!visiveis.length && <tr><td colSpan={acoes ? 4 : 3} className="nada">Nenhuma movimentação com esse filtro.</td></tr>}
+          {!movs.length && (
+            <tr>
+              <td colSpan={acoes ? 4 : 3} className="nada">
+                Nenhuma movimentação com esses filtros.
+                {aoLimpar && <> <button className="limpar" onClick={aoLimpar}>Limpar filtros</button></>}
+              </td>
+            </tr>
+          )}
         </tbody>
       </table>
     </section>

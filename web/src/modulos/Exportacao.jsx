@@ -1,17 +1,9 @@
 import { useMemo, useState } from "react";
 import { URL_EXPORTAR } from "../api.js";
+import Segmentos from "../componentes/Segmentos.jsx";
+import { PERIODOS, faixaDe } from "../periodos.js";
 import { moeda, dataCompleta } from "../format.js";
 
-const iso = (d) => d.toISOString().slice(0, 10);
-const dias = (n) => { const d = new Date(); d.setDate(d.getDate() - n); return iso(d); };
-
-const PERIODOS = [
-  ["tudo", "Tudo", () => ({})],
-  ["7", "Últimos 7 dias", () => ({ de: dias(7) })],
-  ["30", "Últimos 30 dias", () => ({ de: dias(30) })],
-  ["mes", "Este mês", () => ({ de: iso(new Date()).slice(0, 8) + "01" })],
-  ["custom", "Personalizado", null],
-];
 const TIPOS = [["todas", "Todas"], ["entradas", "Só entradas"], ["saidas", "Só saídas"]];
 const FORMATOS = [["ofx", "OFX"], ["csv", "CSV"], ["xlsx", "Excel"]];
 
@@ -31,14 +23,6 @@ function baixarCsv(linhas, nome) {
   URL.revokeObjectURL(url);
 }
 
-function Segmentos({ opcoes, valor, onChange, rotulo }) {
-  return (
-    <div className="filtros" role="group" aria-label={rotulo} style={{ "--i": opcoes.findIndex(([v]) => v === valor), "--n": opcoes.length }}>
-      {opcoes.map(([v, nome]) => <button type="button" key={v} aria-pressed={v === valor} onClick={() => onChange(v)}>{nome}</button>)}
-    </div>
-  );
-}
-
 // baixa o que esta no banco, com periodo, tipo e formato escolhidos
 export default function Exportacao({ extrato }) {
   const { movs } = extrato;
@@ -48,7 +32,7 @@ export default function Exportacao({ extrato }) {
   const [tipo, setTipo] = useState("todas");
   const [formato, setFormato] = useState("ofx");
 
-  const faixa = periodo === "custom" ? { de: de || undefined, ate: ate || undefined } : PERIODOS.find(([p]) => p === periodo)[2]();
+  const faixa = faixaDe(periodo, de, ate);
   const invalido = faixa.de && faixa.ate && faixa.de > faixa.ate;
 
   const linhas = useMemo(
