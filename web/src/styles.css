@@ -120,7 +120,7 @@ th.num { font-family: inherit; font-size: .9rem; }
 td:first-child { color: var(--suave); white-space: nowrap; padding-right: 16px; }
 .nada { text-align: center; color: var(--suave); padding: 32px 0; }
 .sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
-td.botoes { white-space: nowrap; text-align: right; padding-left: 12px; }
+td.botoes { white-space: nowrap; text-align: right; padding: 12px 8px 12px 12px; }
 td.botoes button { border: 0; background: none; cursor: pointer; width: 34px; height: 34px; border-radius: 8px; display: inline-grid; place-items: center; transition: background .15s, transform .1s; }
 td.botoes button:active { transform: scale(.92); }
 td.botoes .editar { color: var(--petroleo); background: #e3ece8; }
