@@ -6,6 +6,12 @@ from urllib.parse import parse_qs, urlsplit
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
 import db
+import planilha
+
+
+def descricao_do_filtro(de, ate, tipo):
+    periodo = f"{de:%d/%m/%Y} a {ate:%d/%m/%Y}" if de and ate else f"a partir de {de:%d/%m/%Y}" if de else f"até {ate:%d/%m/%Y}" if ate else "todo o período"
+    return f"Extrato de {periodo}" + {"todas": "", "entradas": ", só entradas", "saidas": ", só saídas"}[tipo]
 
 
 class Handler(BaseHTTPRequestHandler):
@@ -48,11 +54,19 @@ class Handler(BaseHTTPRequestHandler):
             if (not de or l[1] >= de) and (not ate or l[1] <= ate)
             and (tipo == "todas" or (l[2] > 0) == (tipo == "entradas"))
         ]
+        formato = q.get("formato", ["ofx"])[0]
+        if formato not in ("ofx", "xlsx"):
+            return self.responder({"erro": "Formato invalido"}, 400)
         nome = "-".join(["extrato", *(str(x) for x in (de, ate) if x), *([tipo] if tipo != "todas" else [])])
-        corpo = db.exportar_ofx(linhas).encode("cp1252", "replace")
+        if formato == "xlsx":
+            corpo = planilha.gerar_xlsx(linhas, descricao_do_filtro(de, ate, tipo))
+            tipo_mime = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        else:
+            corpo = db.exportar_ofx(linhas).encode("cp1252", "replace")
+            tipo_mime = "application/x-ofx"
         self.send_response(200)
-        self.send_header("Content-Type", "application/x-ofx")
-        self.send_header("Content-Disposition", f'attachment; filename="{nome}.ofx"')
+        self.send_header("Content-Type", tipo_mime)
+        self.send_header("Content-Disposition", f'attachment; filename="{nome}.{formato}"')
         self.send_header("Content-Length", str(len(corpo)))
         self.end_headers()
         self.wfile.write(corpo)

@@ -13,7 +13,13 @@ const PERIODOS = [
   ["custom", "Personalizado", null],
 ];
 const TIPOS = [["todas", "Todas"], ["entradas", "Só entradas"], ["saidas", "Só saídas"]];
-const FORMATOS = [["ofx", "OFX"], ["csv", "CSV"]];
+const FORMATOS = [["ofx", "OFX"], ["csv", "CSV"], ["xlsx", "Excel"]];
+
+const DICAS = {
+  ofx: "Formato dos bancos. Se importado de novo, tudo é reconhecido como já existente.",
+  csv: "Texto simples para abrir no Excel ou Google Planilhas, sem formatação.",
+  xlsx: "Planilha do Excel já formatada com as cores do Livro-caixa, com totais que se recalculam se você editar.",
+};
 
 // CSV em pt-BR para abrir direto no Excel (separador ; e virgula decimal, com BOM)
 function baixarCsv(linhas, nome) {
@@ -55,7 +61,7 @@ export default function Exportacao({ extrato }) {
   const soma = (f) => linhas.filter(f).reduce((s, m) => s + m.valor, 0);
   const pronto = linhas.length > 0 && !invalido;
 
-  const params = new URLSearchParams({ ...(faixa.de && { de: faixa.de }), ...(faixa.ate && { ate: faixa.ate }), ...(tipo !== "todas" && { tipo }) });
+  const params = new URLSearchParams({ ...(formato === "xlsx" && { formato }), ...(faixa.de && { de: faixa.de }), ...(faixa.ate && { ate: faixa.ate }), ...(tipo !== "todas" && { tipo }) });
   const href = URL_EXPORTAR + (params.size ? "?" + params : "");
   const nomeCsv = ["extrato", faixa.de, faixa.ate, tipo !== "todas" && tipo].filter(Boolean).join("-");
 
@@ -81,7 +87,7 @@ export default function Exportacao({ extrato }) {
 
         <p className="rotulo">Formato</p>
         <Segmentos opcoes={FORMATOS} valor={formato} onChange={setFormato} rotulo="Formato do arquivo" />
-        <p className="nota">{formato === "ofx" ? "Formato dos bancos. Se importado de novo, tudo é reconhecido como já existente." : "Planilha para abrir no Excel ou Google Planilhas."}</p>
+        <p className="nota">{DICAS[formato]}</p>
       </section>
 
       <aside className="painel resultado" aria-live="polite">
@@ -94,10 +100,10 @@ export default function Exportacao({ extrato }) {
           <div><dt>Saldo</dt><dd>{moeda(soma(() => true))}</dd></div>
         </dl>
         {!linhas.length && !invalido && <p className="nota">Nenhuma movimentação nesse filtro. Mude o período ou o tipo.</p>}
-        {formato === "ofx" ? (
-          <a className="botao" href={pronto ? href : undefined} download aria-disabled={!pronto}>Baixar .ofx</a>
-        ) : (
+        {formato === "csv" ? (
           <button className="botao" disabled={!pronto} onClick={() => baixarCsv(linhas, nomeCsv)}>Baixar .csv</button>
+        ) : (
+          <a className="botao" href={pronto ? href : undefined} download aria-disabled={!pronto}>Baixar .{formato}</a>
         )}
       </aside>
     </div>
