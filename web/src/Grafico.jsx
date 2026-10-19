@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { moeda, dataCurta } from "./format.js";
 
-const W = 800, H = 240, PAD = { t: 16, r: 8, b: 28, l: 8 };
+const W = 800, H = 260, PAD = { t: 16, r: 8, b: 28, l: 8 };
 
 // saldo acumulado ao longo do tempo, em degraus: o saldo so muda quando ha movimentacao
 export default function Grafico({ movimentos }) {
@@ -45,7 +45,7 @@ export default function Grafico({ movimentos }) {
       >
         <path d={area} className="area" />
         <line x1={PAD.l} x2={W - PAD.r} y1={y(0)} y2={y(0)} className="zero" />
-        <path d={d} className="linha" />
+        <path d={d} className="linha" pathLength="1" />
         <text x={PAD.l} y={H - 8} className="eixo">{dataCurta(pontos[0].data)}</text>
         <text x={W - PAD.r} y={H - 8} className="eixo" textAnchor="end">{dataCurta(pontos.at(-1).data)}</text>
         {h && (
