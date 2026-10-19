@@ -13,7 +13,16 @@ python main.py   # exibe o extrato, entradas, saídas e saldo
 python db.py     # grava no PostgreSQL (precisa do .env)
 ```
 
-Para o `db.py`, copie `.env.example` para `.env` e preencha `DATABASE_URL` com a connection string do Neon.
+### Interface web (React)
+
+```bash
+python api.py                         # terminal 1: API em localhost:8000
+cd web && npm install && npm run dev  # terminal 2: abra http://localhost:5173
+```
+
+Mostra o saldo, o gráfico do saldo acumulado, entradas, saídas e as movimentações salvas no Neon. O botão "Importar arquivo .ofx" (ou arrastar o arquivo) grava no banco sem duplicar.
+
+Para o `db.py` e a API, copie `.env.example` para `.env` e preencha `DATABASE_URL` com a connection string do Neon.
 
 ## Desafio extra: PostgreSQL
 
