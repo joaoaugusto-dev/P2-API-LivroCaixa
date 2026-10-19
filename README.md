@@ -26,7 +26,7 @@ A interface tem quatro módulos, escolhidos pelo seletor de perfil no topo:
 |---|---|---|
 | Análise | saldo, gráfico, indicadores e lista (somente leitura) | Administrador geral, Análise |
 | Inserção | lançar movimentação e importar `.ofx` | Administrador geral, Inserção |
-| Exportação | baixar o extrato como `.ofx` | Administrador geral, Exportação |
+| Exportação | baixar em `.ofx` ou `.csv`, com período (atalhos ou datas personalizadas) e tipo (todas, só entradas, só saídas) | Administrador geral, Exportação |
 | Administração | criar, editar e excluir | Administrador geral |
 
 Os perfis só organizam a tela: não há login nem controle de acesso de verdade.

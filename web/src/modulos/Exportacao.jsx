@@ -1,26 +1,105 @@
+import { useMemo, useState } from "react";
 import { URL_EXPORTAR } from "../api.js";
-import { calcular } from "../Kpis.js";
 import { moeda, dataCompleta } from "../format.js";
 
-// baixa o que esta no banco como .ofx (pode ser reimportado sem duplicar)
+const iso = (d) => d.toISOString().slice(0, 10);
+const dias = (n) => { const d = new Date(); d.setDate(d.getDate() - n); return iso(d); };
+
+const PERIODOS = [
+  ["tudo", "Tudo", () => ({})],
+  ["7", "Últimos 7 dias", () => ({ de: dias(7) })],
+  ["30", "Últimos 30 dias", () => ({ de: dias(30) })],
+  ["mes", "Este mês", () => ({ de: iso(new Date()).slice(0, 8) + "01" })],
+  ["custom", "Personalizado", null],
+];
+const TIPOS = [["todas", "Todas"], ["entradas", "Só entradas"], ["saidas", "Só saídas"]];
+const FORMATOS = [["ofx", "OFX"], ["csv", "CSV"]];
+
+// CSV em pt-BR para abrir direto no Excel (separador ; e virgula decimal, com BOM)
+function baixarCsv(linhas, nome) {
+  const celula = (t) => `"${String(t).replace(/"/g, '""')}"`;
+  const corpo = ["Data;Descrição;Valor", ...linhas.map((m) => [dataCompleta(m.data), celula(m.descricao), m.valor.toFixed(2).replace(".", ",")].join(";"))].join("\r\n");
+  const url = URL.createObjectURL(new Blob(["﻿" + corpo], { type: "text/csv;charset=utf-8" }));
+  const a = Object.assign(document.createElement("a"), { href: url, download: nome + ".csv" });
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+function Segmentos({ opcoes, valor, onChange, rotulo }) {
+  return (
+    <div className="filtros" role="group" aria-label={rotulo} style={{ "--i": opcoes.findIndex(([v]) => v === valor), "--n": opcoes.length }}>
+      {opcoes.map(([v, nome]) => <button type="button" key={v} aria-pressed={v === valor} onClick={() => onChange(v)}>{nome}</button>)}
+    </div>
+  );
+}
+
+// baixa o que esta no banco, com periodo, tipo e formato escolhidos
 export default function Exportacao({ extrato }) {
   const { movs } = extrato;
-  const k = calcular(movs);
+  const [periodo, setPeriodo] = useState("tudo");
+  const [de, setDe] = useState("");
+  const [ate, setAte] = useState("");
+  const [tipo, setTipo] = useState("todas");
+  const [formato, setFormato] = useState("ofx");
+
+  const faixa = periodo === "custom" ? { de: de || undefined, ate: ate || undefined } : PERIODOS.find(([p]) => p === periodo)[2]();
+  const invalido = faixa.de && faixa.ate && faixa.de > faixa.ate;
+
+  const linhas = useMemo(
+    () => movs.filter((m) =>
+      (!faixa.de || m.data >= faixa.de) && (!faixa.ate || m.data <= faixa.ate) &&
+      (tipo === "todas" || (m.valor > 0) === (tipo === "entradas"))
+    ),
+    [movs, faixa.de, faixa.ate, tipo]
+  );
+  const soma = (f) => linhas.filter(f).reduce((s, m) => s + m.valor, 0);
+  const pronto = linhas.length > 0 && !invalido;
+
+  const params = new URLSearchParams({ ...(faixa.de && { de: faixa.de }), ...(faixa.ate && { ate: faixa.ate }), ...(tipo !== "todas" && { tipo }) });
+  const href = URL_EXPORTAR + (params.size ? "?" + params : "");
+  const nomeCsv = ["extrato", faixa.de, faixa.ate, tipo !== "todas" && tipo].filter(Boolean).join("-");
 
   return (
-    <section className="painel exportar">
-      <h2>Exportar extrato</h2>
-      {movs.length ? (
+    <div className="exportar-grade">
+      <section className="painel">
+        <h2>Exportar extrato</h2>
+
+        <p className="rotulo">Período</p>
+        <div className="chips" role="group" aria-label="Período">
+          {PERIODOS.map(([p, nome]) => <button type="button" key={p} aria-pressed={periodo === p} onClick={() => setPeriodo(p)}>{nome}</button>)}
+        </div>
+        {periodo === "custom" && (
+          <div className="datas">
+            <label>De<input type="date" value={de} max={ate || undefined} onChange={(e) => setDe(e.target.value)} /></label>
+            <label>Até<input type="date" value={ate} min={de || undefined} onChange={(e) => setAte(e.target.value)} /></label>
+          </div>
+        )}
+        {invalido && <p className="erro">A data inicial é depois da final.</p>}
+
+        <p className="rotulo">O que incluir</p>
+        <Segmentos opcoes={TIPOS} valor={tipo} onChange={setTipo} rotulo="Tipo de movimentação" />
+
+        <p className="rotulo">Formato</p>
+        <Segmentos opcoes={FORMATOS} valor={formato} onChange={setFormato} rotulo="Formato do arquivo" />
+        <p className="nota">{formato === "ofx" ? "Formato dos bancos. Se importado de novo, tudo é reconhecido como já existente." : "Planilha para abrir no Excel ou Google Planilhas."}</p>
+      </section>
+
+      <aside className="painel resultado" aria-live="polite">
+        <h2>O que será baixado</h2>
         <dl className="resumo-export">
-          <div><dt>Movimentações</dt><dd>{movs.length}</dd></div>
-          <div><dt>Período</dt><dd>{dataCompleta(k.inicio)} a {dataCompleta(k.fim)}</dd></div>
-          <div><dt>Saldo calculado</dt><dd>{moeda(k.saldo)}</dd></div>
+          <div><dt>Movimentações</dt><dd>{linhas.length}</dd></div>
+          <div><dt>Período</dt><dd>{linhas.length ? `${dataCompleta(linhas[0].data)} a ${dataCompleta(linhas.at(-1).data)}` : "—"}</dd></div>
+          <div><dt>Entradas</dt><dd className="entrada">{moeda(soma((m) => m.valor > 0))}</dd></div>
+          <div><dt>Saídas</dt><dd className="saida">{moeda(soma((m) => m.valor < 0))}</dd></div>
+          <div><dt>Saldo</dt><dd>{moeda(soma(() => true))}</dd></div>
         </dl>
-      ) : (
-        <p className="nota">Não há movimentações para exportar. Importe ou lance algumas no módulo Inserção.</p>
-      )}
-      <p className="nota">O arquivo segue o formato OFX dos bancos. Se for importado de novo, tudo é reconhecido como já existente.</p>
-      <a className="botao" href={movs.length ? URL_EXPORTAR : undefined} download aria-disabled={!movs.length}>Baixar .ofx</a>
-    </section>
+        {!linhas.length && !invalido && <p className="nota">Nenhuma movimentação nesse filtro. Mude o período ou o tipo.</p>}
+        {formato === "ofx" ? (
+          <a className="botao" href={pronto ? href : undefined} download aria-disabled={!pronto}>Baixar .ofx</a>
+        ) : (
+          <button className="botao" disabled={!pronto} onClick={() => baixarCsv(linhas, nomeCsv)}>Baixar .csv</button>
+        )}
+      </aside>
+    </div>
   );
 }
