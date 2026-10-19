@@ -1,5 +1,6 @@
 import os
 import uuid
+from datetime import date
 
 import psycopg2
 from dotenv import load_dotenv
@@ -53,12 +54,36 @@ def listar():
     conn = conectar()
     with conn, conn.cursor() as cur:
         cur.execute(
-            "SELECT id, data_movimentacao, valor, descricao FROM movimentacoes "
+            "SELECT id, data_movimentacao, valor, descricao, fitid FROM movimentacoes "
             "ORDER BY data_movimentacao, id"
         )
         linhas = cur.fetchall()
     conn.close()
     return linhas
+
+
+def exportar_ofx(linhas):
+    """Monta um OFX (SGML, como os bancos exportam) a partir de listar(); da pra reimportar."""
+    esc = lambda t: t.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
+    datas = [l[1] for l in linhas]
+    ini, fim = (min(datas), max(datas)) if datas else (date.today(),) * 2
+    trans = "".join(
+        f"<STMTTRN>\n<TRNTYPE>{'CREDIT' if v > 0 else 'DEBIT'}\n<DTPOSTED>{d:%Y%m%d}000000\n"
+        f"<TRNAMT>{v:.2f}\n<FITID>{fitid}\n<MEMO>{esc(desc)}\n</STMTTRN>\n"
+        for _, d, v, desc, fitid in linhas
+    )
+    saldo = sum(l[2] for l in linhas)
+    return (
+        "OFXHEADER:100\nDATA:OFXSGML\nVERSION:102\nSECURITY:NONE\nENCODING:USASCII\n"
+        "CHARSET:1252\nCOMPRESSION:NONE\nOLDFILEUID:NONE\nNEWFILEUID:NONE\n\n"
+        f"<OFX>\n<SIGNONMSGSRSV1>\n<SONRS>\n<STATUS>\n<CODE>0\n<SEVERITY>INFO\n</STATUS>\n"
+        f"<DTSERVER>{date.today():%Y%m%d}000000\n<LANGUAGE>POR\n</SONRS>\n</SIGNONMSGSRSV1>\n"
+        "<BANKMSGSRSV1>\n<STMTTRNRS>\n<TRNUID>1\n<STATUS>\n<CODE>0\n<SEVERITY>INFO\n</STATUS>\n"
+        "<STMTRS>\n<CURDEF>BRL\n<BANKACCTFROM>\n<BANKID>000\n<ACCTID>exportado\n<ACCTTYPE>CHECKING\n"
+        f"</BANKACCTFROM>\n<BANKTRANLIST>\n<DTSTART>{ini:%Y%m%d}000000\n<DTEND>{fim:%Y%m%d}000000\n"
+        f"{trans}</BANKTRANLIST>\n<LEDGERBAL>\n<BALAMT>{saldo:.2f}\n<DTASOF>{fim:%Y%m%d}000000\n"
+        "</LEDGERBAL>\n</STMTRS>\n</STMTTRNRS>\n</BANKMSGSRSV1>\n</OFX>\n"
+    )
 
 
 def _executar(sql, params):

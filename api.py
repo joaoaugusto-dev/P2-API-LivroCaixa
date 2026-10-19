@@ -46,11 +46,19 @@ class Handler(BaseHTTPRequestHandler):
             self.responder({"ok": True} if ok else {"erro": "Movimentacao nao existe"}, 200 if ok else 404)
 
     def do_GET(self):
+        if self.path == "/api/exportar":
+            corpo = db.exportar_ofx(db.listar()).encode("cp1252", "replace")
+            self.send_response(200)
+            self.send_header("Content-Type", "application/x-ofx")
+            self.send_header("Content-Disposition", 'attachment; filename="extrato-exportado.ofx"')
+            self.send_header("Content-Length", str(len(corpo)))
+            self.end_headers()
+            return self.wfile.write(corpo)
         if self.path != "/api/movimentacoes":
             return self.responder({"erro": "nao encontrado"}, 404)
         self.responder([
             {"id": i, "data": d, "valor": float(v), "descricao": desc}
-            for i, d, v, desc in db.listar()
+            for i, d, v, desc, _ in db.listar()
         ])
 
     def do_POST(self):
