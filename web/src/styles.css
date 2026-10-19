@@ -82,3 +82,21 @@ td:first-child { color: var(--suave); white-space: nowrap; padding-right: 16px; 
 }
 @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
 th.num { font-family: inherit; font-size: .9rem; }
+
+.acoes { display: flex; gap: 8px; flex-wrap: wrap; }
+button.sec { background: none; color: var(--tinta); border: 1px solid var(--linha); border-radius: var(--raio); padding: 10px 18px; font-weight: 600; cursor: pointer; }
+button.sec:hover { border-color: var(--tinta); background: none; }
+.sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
+td.botoes { white-space: nowrap; text-align: right; padding-left: 12px; }
+td.botoes button { border: 0; background: none; color: var(--suave); cursor: pointer; padding: 4px 8px; border-radius: 6px; font-weight: 500; }
+td.botoes button:hover { background: var(--fundo); color: var(--tinta); }
+td.botoes button:last-child:hover { color: var(--neg); }
+@media (hover: hover) { td.botoes button { opacity: .0; } tr:hover td.botoes button, td.botoes button:focus-visible { opacity: 1; } }
+dialog { border: 0; border-radius: 14px; padding: 24px; width: min(420px, calc(100vw - 32px)); color: var(--tinta); }
+dialog::backdrop { background: rgb(16 28 38 / .45); }
+dialog h2 { margin: 0 0 16px; font-size: 1.25rem; }
+dialog label { display: block; font-weight: 500; margin-bottom: 14px; }
+dialog input { display: block; width: 100%; margin-top: 4px; font: inherit; padding: 9px 12px; border: 1px solid var(--linha); border-radius: var(--raio); }
+.botoes-form { display: flex; justify-content: flex-end; gap: 8px; margin-top: 8px; }
+.botoes-form button[type="submit"] { background: var(--tinta); color: #fff; border: 0; border-radius: var(--raio); padding: 10px 18px; font-weight: 600; cursor: pointer; }
+.botoes-form button[type="submit"]:hover { background: var(--azul); }

@@ -12,6 +12,33 @@ export default function App() {
   const [busca, setBusca] = useState("");
   const [arrastando, setArrastando] = useState(false);
   const input = useRef();
+  const dialogo = useRef();
+  const [form, setForm] = useState(null); // null = fechado; {id?, data, valor, descricao}
+  const [erroForm, setErroForm] = useState("");
+
+  const abrir = (m) => {
+    setErroForm("");
+    setForm(m ? { id: m.id, data: m.data, valor: String(m.valor), descricao: m.descricao } : { data: new Date().toISOString().slice(0, 10), valor: "", descricao: "" });
+    dialogo.current.showModal();
+  };
+
+  const salvar = async (e) => {
+    e.preventDefault();
+    const { id, ...corpo } = form;
+    corpo.valor = Number(String(corpo.valor).replace(",", "."));
+    const r = await fetch("/api/movimentacoes" + (id ? "/" + id : ""), { method: id ? "PUT" : "POST", body: JSON.stringify(corpo) });
+    if (!r.ok) return setErroForm((await r.json()).erro);
+    dialogo.current.close();
+    setAviso(id ? "Movimentação atualizada." : "Movimentação adicionada.");
+    carregar();
+  };
+
+  const excluir = async (m) => {
+    if (!confirm(`Excluir "${m.descricao}" de ${dataCompleta(m.data)}?`)) return;
+    await fetch("/api/movimentacoes/" + m.id, { method: "DELETE" });
+    setAviso("Movimentação excluída.");
+    carregar();
+  };
 
   const carregar = () =>
     fetch("/api/movimentacoes")
@@ -57,7 +84,10 @@ export default function App() {
     >
       <header>
         <h1>Extrato bancário</h1>
-        <button onClick={() => input.current.click()}>Importar arquivo .ofx</button>
+        <div className="acoes">
+          <button className="sec" onClick={() => abrir()}>Nova movimentação</button>
+          <button onClick={() => input.current.click()}>Importar arquivo .ofx</button>
+        </div>
         <input ref={input} type="file" accept=".ofx" hidden onChange={(e) => { importar(e.target.files[0]); e.target.value = ""; }} />
       </header>
 
@@ -98,7 +128,7 @@ export default function App() {
             </div>
             <table>
               <thead>
-                <tr><th>Data</th><th>Descrição</th><th className="num">Valor</th></tr>
+                <tr><th>Data</th><th>Descrição</th><th className="num">Valor</th><th><span className="sr">Ações</span></th></tr>
               </thead>
               <tbody>
                 {visiveis.map((m) => (
@@ -106,16 +136,35 @@ export default function App() {
                     <td>{dataCompleta(m.data)}</td>
                     <td>{m.descricao}</td>
                     <td className={"num " + (m.valor < 0 ? "neg" : "pos")}>{moeda(m.valor)}</td>
+                    <td className="botoes">
+                      <button onClick={() => abrir(m)} aria-label={`Editar ${m.descricao}`}>Editar</button>
+                      <button onClick={() => excluir(m)} aria-label={`Excluir ${m.descricao}`}>Excluir</button>
+                    </td>
                   </tr>
                 ))}
                 {!visiveis.length && (
-                  <tr><td colSpan="3" className="nada">Nenhuma movimentação com esse filtro.</td></tr>
+                  <tr><td colSpan="4" className="nada">Nenhuma movimentação com esse filtro.</td></tr>
                 )}
               </tbody>
             </table>
           </section>
         </>
       )}
+      <dialog ref={dialogo} onClose={() => setForm(null)}>
+        {form && (
+          <form onSubmit={salvar}>
+            <h2>{form.id ? "Editar movimentação" : "Nova movimentação"}</h2>
+            <label>Data<input type="date" required value={form.data} onChange={(e) => setForm({ ...form, data: e.target.value })} /></label>
+            <label>Valor (negativo para saída)<input type="text" inputMode="decimal" required placeholder="-150,00" value={form.valor} onChange={(e) => setForm({ ...form, valor: e.target.value })} /></label>
+            <label>Descrição<input type="text" required maxLength="255" value={form.descricao} onChange={(e) => setForm({ ...form, descricao: e.target.value })} /></label>
+            {erroForm && <p className="erro">{erroForm}</p>}
+            <div className="botoes-form">
+              <button type="button" className="sec" onClick={() => dialogo.current.close()}>Cancelar</button>
+              <button type="submit">{form.id ? "Salvar alterações" : "Adicionar"}</button>
+            </div>
+          </form>
+        )}
+      </dialog>
       {movs === null && !erro && <p className="carregando">Carregando movimentações…</p>}
     </div>
   );
