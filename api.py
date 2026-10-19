@@ -2,6 +2,7 @@ import io
 import json
 from datetime import date
 from decimal import Decimal
+from urllib.parse import parse_qs, urlsplit
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
 import db
@@ -32,6 +33,30 @@ class Handler(BaseHTTPRequestHandler):
             return int(self.path[len(prefixo):])
         self.responder({"erro": "nao encontrado"}, 404)
 
+    def exportar(self, q):
+        """?de=AAAA-MM-DD&ate=AAAA-MM-DD&tipo=entradas|saidas (todos opcionais)"""
+        try:
+            de = date.fromisoformat(q["de"][0]) if "de" in q else None
+            ate = date.fromisoformat(q["ate"][0]) if "ate" in q else None
+        except ValueError:
+            return self.responder({"erro": "Periodo invalido"}, 400)
+        tipo = q.get("tipo", ["todas"])[0]
+        if tipo not in ("todas", "entradas", "saidas"):
+            return self.responder({"erro": "Tipo invalido"}, 400)
+        linhas = [
+            l for l in db.listar()
+            if (not de or l[1] >= de) and (not ate or l[1] <= ate)
+            and (tipo == "todas" or (l[2] > 0) == (tipo == "entradas"))
+        ]
+        nome = "-".join(["extrato", *(str(x) for x in (de, ate) if x), *([tipo] if tipo != "todas" else [])])
+        corpo = db.exportar_ofx(linhas).encode("cp1252", "replace")
+        self.send_response(200)
+        self.send_header("Content-Type", "application/x-ofx")
+        self.send_header("Content-Disposition", f'attachment; filename="{nome}.ofx"')
+        self.send_header("Content-Length", str(len(corpo)))
+        self.end_headers()
+        self.wfile.write(corpo)
+
     def do_PUT(self):
         id = self.id_da_url()
         campos = id and self.corpo_json()
@@ -46,14 +71,9 @@ class Handler(BaseHTTPRequestHandler):
             self.responder({"ok": True} if ok else {"erro": "Movimentacao nao existe"}, 200 if ok else 404)
 
     def do_GET(self):
-        if self.path == "/api/exportar":
-            corpo = db.exportar_ofx(db.listar()).encode("cp1252", "replace")
-            self.send_response(200)
-            self.send_header("Content-Type", "application/x-ofx")
-            self.send_header("Content-Disposition", 'attachment; filename="extrato-exportado.ofx"')
-            self.send_header("Content-Length", str(len(corpo)))
-            self.end_headers()
-            return self.wfile.write(corpo)
+        url = urlsplit(self.path)
+        if url.path == "/api/exportar":
+            return self.exportar(parse_qs(url.query))
         if self.path != "/api/movimentacoes":
             return self.responder({"erro": "nao encontrado"}, 404)
         self.responder([
