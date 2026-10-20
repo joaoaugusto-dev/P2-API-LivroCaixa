@@ -445,3 +445,5 @@ mark { background: var(--ouro-claro); color: inherit; border-radius: 3px; paddin
 ::view-transition-new(root) { z-index: 2; }
 /* sem View Transitions: cores mudam suavemente por 400ms */
 html.tema-troca *, html.tema-troca *::before, html.tema-troca *::after { transition: background-color 380ms ease, color 380ms ease, border-color 380ms ease, fill 380ms ease, stroke 380ms ease !important; }
+.ranking ol { grid-template-columns: minmax(0, 1fr); }
+.ranking-texto { min-width: 0; }
