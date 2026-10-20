@@ -60,7 +60,7 @@ Funciona no celular, sem rolagem horizontal:
 
 ## Como rodar
 
-Requisitos: Python 3.10+, Node 20+ e um banco PostgreSQL (o projeto usa o [Neon](https://neon.tech)).
+Requisitos: Python 3.10+, Node 20.19+ (ou 22.12+) e um banco PostgreSQL (o projeto usa o [Neon](https://neon.tech)).
 
 ```bash
 # 1. Ambiente Python
