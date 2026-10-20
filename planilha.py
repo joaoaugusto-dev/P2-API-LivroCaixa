@@ -17,20 +17,22 @@ def _fonte(**kw):
     return Font(name=FONTE, **kw)
 
 
-def gerar_xlsx(linhas, filtro):
-    """linhas: o mesmo formato de db.listar(). filtro: texto que descreve o recorte."""
+def gerar_xlsx(linhas, filtro, categorias=None):
+    """linhas: o mesmo formato de db.listar(). filtro: texto que descreve o recorte.
+    categorias: {id: nome} para preencher a coluna Categoria."""
+    categorias = categorias or {}
     # 1) Cria a pasta de trabalho e configura a aba (cor, sem linhas de grade, larguras)
     wb = Workbook()
     ws = wb.active
     ws.title = "Extrato"
     ws.sheet_properties.tabColor = PETROLEO
     ws.sheet_view.showGridLines = False
-    for col, largura in zip("ABCD", (14, 52, 18, 4)):
+    for col, largura in zip("ABCD", (14, 46, 18, 24)):
         ws.column_dimensions[col].width = largura
 
     # 2) Faixa de título verde-petróleo com um filete dourado embaixo
     for r in (1, 2):
-        for c in "ABC":
+        for c in "ABCD":
             ws[f"{c}{r}"].fill = PatternFill("solid", fgColor=PETROLEO)
     ws["A1"] = "Livro-caixa"
     ws["A1"].font = _fonte(size=20, bold=True, color="FFFFFF")
@@ -38,7 +40,7 @@ def gerar_xlsx(linhas, filtro):
     ws["A2"].font = _fonte(size=10, color="9FBBB8")
     ws.row_dimensions[1].height = 34
     ws.row_dimensions[2].height = 20
-    for c in "ABC":
+    for c in "ABCD":
         ws[f"{c}3"].fill = PatternFill("solid", fgColor=OURO)
     ws.row_dimensions[3].height = 4
 
@@ -65,7 +67,7 @@ def gerar_xlsx(linhas, filtro):
 
     # 4) Tabela: cabeçalho colorido + uma linha por movimentação
     cab = topo - 1
-    for c, titulo in zip("ABC", ("Data", "Descrição", "Valor")):
+    for c, titulo in zip("ABCD", ("Data", "Descrição", "Valor", "Categoria")):
         cel = ws[f"{c}{cab}"]
         cel.value = titulo
         cel.font = _fonte(bold=True, color="FFFFFF")
@@ -73,15 +75,17 @@ def gerar_xlsx(linhas, filtro):
         cel.alignment = Alignment(horizontal="right" if c == "C" else "left", vertical="center", indent=1)
     ws.row_dimensions[cab].height = 24
 
-    for i, (_, data, valor, desc, _) in enumerate(linhas):
+    for i, (_, data, valor, desc, _, cat_id, *_) in enumerate(linhas):
         r = topo + i
         ws[f"A{r}"], ws[f"B{r}"], ws[f"C{r}"] = data, desc, float(valor)
+        ws[f"D{r}"] = categorias.get(cat_id, "Sem categoria")
         ws[f"A{r}"].number_format = "DD/MM/YYYY"
         ws[f"A{r}"].font = _fonte(color=SUAVE)
         ws[f"B{r}"].font = _fonte()
         ws[f"C{r}"].number_format = MOEDA
         ws[f"C{r}"].font = _fonte(bold=True, color=ENTRADA if valor > 0 else SAIDA)
-        for c in "ABC":
+        ws[f"D{r}"].font = _fonte(color=SUAVE)
+        for c in "ABCD":
             cel = ws[f"{c}{r}"]
             cel.border = Border(bottom=Side(style="hair", color=LINHA))
             cel.alignment = Alignment(horizontal="right" if c == "C" else "left", indent=1, vertical="center")
@@ -91,7 +95,7 @@ def gerar_xlsx(linhas, filtro):
 
     # 5) Acabamento: filtro, cabeçalho congelado e impressão ajustada à largura da página
     if linhas:
-        ws.auto_filter.ref = f"A{cab}:C{fim}"
+        ws.auto_filter.ref = f"A{cab}:D{fim}"
     ws.freeze_panes = f"A{topo}"
     ws.page_setup.orientation = "portrait"
     ws.page_setup.fitToWidth, ws.page_setup.fitToHeight = 1, 0

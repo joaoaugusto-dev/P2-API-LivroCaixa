@@ -1,6 +1,7 @@
 """API HTTP mínima (só biblioteca padrão do Python). É a ponte entre a interface React (web/) e o banco (db.py)."""
 import io
 import json
+import re
 from datetime import date
 from decimal import Decimal
 from urllib.parse import parse_qs, urlsplit
@@ -34,6 +35,8 @@ class Handler(BaseHTTPRequestHandler):
             d = json.loads(self.rfile.read(int(self.headers.get("Content-Length", 0))))
             data, valor, desc = date.fromisoformat(d["data"]), Decimal(str(d["valor"])), str(d["descricao"]).strip()
             assert desc and len(desc) <= 255 and valor.is_finite()
+            self.categoria_id = d.get("categoria_id")  # opcional: a categoria escolhida ao criar
+            assert self.categoria_id is None or isinstance(self.categoria_id, int)
             return data, valor, desc
         except Exception:
             self.responder({"erro": "Informe data, valor e descricao validos"}, 400)
@@ -66,7 +69,8 @@ class Handler(BaseHTTPRequestHandler):
             return self.responder({"erro": "Formato invalido"}, 400)
         nome = "-".join(["extrato", *(str(x) for x in (de, ate) if x), *([tipo] if tipo != "todas" else [])])
         if formato == "xlsx":
-            corpo = planilha.gerar_xlsx(linhas, descricao_do_filtro(de, ate, tipo))
+            nomes = {c[0]: c[1] for c in db.listar_categorias()}  # id -> nome, para a coluna Categoria
+            corpo = planilha.gerar_xlsx(linhas, descricao_do_filtro(de, ate, tipo), nomes)
             tipo_mime = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
         else:
             corpo = db.exportar_ofx(linhas).encode("cp1252", "replace")
@@ -78,41 +82,104 @@ class Handler(BaseHTTPRequestHandler):
         self.end_headers()
         self.wfile.write(corpo)
 
-    # PUT = editar uma movimentação existente
+    # Lê o corpo da requisição como JSON (devolve {} se vier vazio ou inválido)
+    def ler_json(self):
+        try:
+            return json.loads(self.rfile.read(int(self.headers.get("Content-Length", 0)))) or {}
+        except Exception:
+            return {}
+
+    # Valida nome (até 40 letras) e cor (1 a 8) de uma categoria; devolve (nome, cor) ou None
+    def corpo_categoria(self):
+        d = self.ler_json()
+        nome, cor = str(d.get("nome", "")).strip(), d.get("cor", 1)
+        if not nome or len(nome) > 40 or not isinstance(cor, int) or not 1 <= cor <= 8:
+            return self.responder({"erro": "Informe um nome (até 40 letras) e uma cor válida"}, 400)
+        return nome, cor
+
+    # Extrai o número de rotas como /api/categorias/7 ou /api/movimentacoes/7/categoria
+    def numero_em(self, modelo):
+        m = re.fullmatch(modelo, self.path)
+        return int(m.group(1)) if m else None
+
+    # PUT = editar uma movimentação, trocar a categoria dela ou editar uma categoria
     def do_PUT(self):
+        mov_cat = self.numero_em(r"/api/movimentacoes/(\d+)/categoria")
+        if mov_cat:  # escolha da pessoa: vira exemplo para o classificador aprender
+            cat = self.ler_json().get("categoria_id")
+            if cat is not None and not isinstance(cat, int):
+                return self.responder({"erro": "Categoria invalida"}, 400)
+            try:
+                atualizadas = db.definir_categoria(mov_cat, cat)
+            except Exception:
+                return self.responder({"erro": "Categoria nao existe"}, 400)
+            if atualizadas is None:
+                return self.responder({"erro": "Movimentacao nao existe"}, 404)
+            return self.responder({"ok": True, "atualizadas": atualizadas})
+        cat_id = self.numero_em(r"/api/categorias/(\d+)")
+        if cat_id:
+            campos = self.corpo_categoria()
+            if campos:
+                try:
+                    ok = db.atualizar_categoria(cat_id, *campos)
+                except ValueError as e:
+                    return self.responder({"erro": str(e)}, 409)
+                self.responder({"ok": True} if ok else {"erro": "Categoria nao existe"}, 200 if ok else 404)
+            return
         id = self.id_da_url()
         campos = id and self.corpo_json()
         if campos:
             ok = db.atualizar(id, *campos)
             self.responder({"ok": True} if ok else {"erro": "Movimentacao nao existe"}, 200 if ok else 404)
 
-    # DELETE = excluir uma movimentação
+    # DELETE = excluir uma movimentação ou uma categoria
     def do_DELETE(self):
+        cat_id = self.numero_em(r"/api/categorias/(\d+)")
+        if cat_id:
+            ok = db.excluir_categoria(cat_id)
+            return self.responder({"ok": True} if ok else {"erro": "Categoria nao existe"}, 200 if ok else 404)
         id = self.id_da_url()
         if id:
             ok = db.excluir(id)
             self.responder({"ok": True} if ok else {"erro": "Movimentacao nao existe"}, 200 if ok else 404)
 
-    # GET = listar as movimentações ou exportar
+    # GET = listar movimentações, listar categorias ou exportar
     def do_GET(self):
         url = urlsplit(self.path)
         if url.path == "/api/exportar":
             return self.exportar(parse_qs(url.query))
+        if self.path == "/api/categorias":
+            return self.responder([
+                {"id": i, "nome": nome, "cor": cor, "qtd": qtd, "total": float(total)}
+                for i, nome, cor, qtd, total in db.listar_categorias()
+            ])
         if self.path != "/api/movimentacoes":
             return self.responder({"erro": "nao encontrado"}, 404)
         self.responder([
-            {"id": i, "data": d, "valor": float(v), "descricao": desc}
-            for i, d, v, desc, _ in db.listar()
+            {"id": i, "data": d, "valor": float(v), "descricao": desc,
+             "categoria_id": cat, "auto": auto, "confianca": conf}
+            for i, d, v, desc, _, cat, auto, conf in db.listar()
         ])
 
-    # POST = criar uma movimentação (JSON) ou importar um arquivo .ofx
+    # POST = criar movimentação ou categoria, reclassificar tudo, ou importar um arquivo .ofx
     def do_POST(self):
         if self.path == "/api/movimentacoes":
             campos = self.corpo_json()
             if campos:
-                db.criar(*campos)
+                db.criar(*campos, categoria_id=self.categoria_id)
                 self.responder({"ok": True}, 201)
             return
+        if self.path == "/api/categorias":
+            campos = self.corpo_categoria()
+            if campos:
+                try:
+                    novo = db.criar_categoria(*campos)
+                except ValueError as e:
+                    return self.responder({"erro": str(e)}, 409)
+                self.responder({"ok": True, "id": novo}, 201)
+            return
+        if self.path == "/api/categorias/reclassificar":
+            return self.responder({"ok": True, "mudaram": db.reclassificar()})
         if self.path != "/api/importar":
             return self.responder({"erro": "nao encontrado"}, 404)
         corpo = self.rfile.read(int(self.headers.get("Content-Length", 0)))

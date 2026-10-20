@@ -5,9 +5,12 @@ import uuid
 from datetime import date
 
 import psycopg2
+import psycopg2.errors
 from psycopg2.pool import ThreadedConnectionPool
 from dotenv import load_dotenv
 from ofxparse import OfxParser
+
+import classificador
 
 load_dotenv()  # carrega DATABASE_URL do arquivo .env (que fica fora do git)
 
@@ -21,6 +24,18 @@ CREATE TABLE IF NOT EXISTS movimentacoes (
     descricao VARCHAR(255),
     fitid VARCHAR(64) UNIQUE
 );
+
+-- CATEGORIAS: `cor` é o número (1 a 8) de uma cor da paleta do front-end
+CREATE TABLE IF NOT EXISTS categorias (
+    id SERIAL PRIMARY KEY,
+    nome VARCHAR(40) UNIQUE NOT NULL,
+    cor SMALLINT NOT NULL DEFAULT 1
+);
+-- Cada movimentação aponta para uma categoria (ou nenhuma). `categoria_auto` = true quando foi o
+-- classificador que escolheu (e a pessoa ainda não confirmou); `categoria_confianca` = quão seguro ele estava.
+ALTER TABLE movimentacoes ADD COLUMN IF NOT EXISTS categoria_id INTEGER REFERENCES categorias(id) ON DELETE SET NULL;
+ALTER TABLE movimentacoes ADD COLUMN IF NOT EXISTS categoria_auto BOOLEAN NOT NULL DEFAULT FALSE;
+ALTER TABLE movimentacoes ADD COLUMN IF NOT EXISTS categoria_confianca REAL;
 """
 
 # Se o fitid já existe, ignora a linha em vez de dar erro (validação de duplicatas)
@@ -52,9 +67,10 @@ def _rodar(fn):
         conn = _pool.getconn()
         quebrou = False
         try:
-            if not _pronto:  # garante a tabela só na primeira vez
+            if not _pronto:  # garante as tabelas (e as categorias padrão) só na primeira vez
                 with conn, conn.cursor() as cur:
                     cur.execute(DDL)
+                    _semear(cur)
                 _pronto.append(True)
             with conn, conn.cursor() as cur:  # o "with conn" faz commit (ou rollback se der erro)
                 return fn(cur)
@@ -66,6 +82,101 @@ def _rodar(fn):
             _pool.putconn(conn, close=quebrou)  # devolve ao pool (descarta se quebrou)
 
 
+# ── Categorias e aprendizado ────────────────────────────────────────────────
+def _semear(cur):
+    """Primeira execução: cria as categorias padrão e já classifica o que existir no banco."""
+    cur.execute("SELECT COUNT(*) FROM categorias")
+    if cur.fetchone()[0] == 0:
+        for nome, (cor, _, _) in classificador.PADRAO.items():
+            cur.execute("INSERT INTO categorias (nome, cor) VALUES (%s, %s)", (nome, cor))
+        _classificar(cur)
+
+
+def _modelo(cur):
+    """TREINA o classificador com o que existe agora: palavras-semente + movimentações categorizadas à mão."""
+    cur.execute("SELECT id, nome FROM categorias")
+    exemplos = [(cid, p, classificador.PESO_SEMENTE) for cid, nome in cur.fetchall() for p in classificador.sementes(nome)]
+    cur.execute("SELECT categoria_id, descricao, valor FROM movimentacoes WHERE categoria_id IS NOT NULL AND NOT categoria_auto")
+    exemplos += [(cid, classificador.palavras(d, v), classificador.PESO_MANUAL) for cid, d, v in cur.fetchall()]
+    return classificador.treinar(exemplos)
+
+
+def _classificar(cur):
+    """Reclassifica tudo que NÃO foi escolhido pela pessoa (sem categoria ou automático).
+    Só aplica se a confiança passar do limiar. Devolve quantas movimentações mudaram de categoria."""
+    modelo = _modelo(cur)
+    cur.execute("SELECT id, descricao, valor, categoria_id, categoria_auto FROM movimentacoes WHERE categoria_id IS NULL OR categoria_auto")
+    mudaram = 0
+    for id, desc, valor, atual, auto in cur.fetchall():
+        r = classificador.prever(modelo, classificador.palavras(desc, valor))
+        cat, conf = (r[0], r[1]) if r and r[1] >= classificador.LIMIAR else (None, None)
+        if cat != atual:
+            mudaram += 1
+        cur.execute(
+            "UPDATE movimentacoes SET categoria_id=%s, categoria_auto=%s, categoria_confianca=%s WHERE id=%s",
+            (cat, cat is not None, conf, id),
+        )
+    return mudaram
+
+
+def definir_categoria(id, categoria_id):
+    """A PESSOA escolheu (ou confirmou) a categoria: vira exemplo de treino e as sugestões são recalculadas.
+    Devolve quantas classificações automáticas mudaram por causa disso (None se a movimentação não existe)."""
+    def fn(cur):
+        cur.execute(
+            "UPDATE movimentacoes SET categoria_id=%s, categoria_auto=FALSE, categoria_confianca=NULL WHERE id=%s",
+            (categoria_id, id),
+        )
+        return _classificar(cur) if cur.rowcount else None
+    return _rodar(fn)
+
+
+def reclassificar():
+    """Botão \"Reaprender\": refaz o treino e reclassifica o que não foi confirmado."""
+    return _rodar(_classificar)
+
+
+def listar_categorias():
+    """Cada categoria com quantas movimentações tem e a soma dos valores."""
+    def fn(cur):
+        cur.execute(
+            "SELECT c.id, c.nome, c.cor, COUNT(m.id), COALESCE(SUM(m.valor), 0) FROM categorias c "
+            "LEFT JOIN movimentacoes m ON m.categoria_id = c.id GROUP BY c.id ORDER BY c.nome"
+        )
+        return cur.fetchall()
+    return _rodar(fn)
+
+
+def _nome_unico(fn):
+    """Converte o erro de nome repetido numa mensagem que a tela mostra."""
+    try:
+        return _rodar(fn)
+    except psycopg2.errors.UniqueViolation:
+        raise ValueError("Já existe uma categoria com esse nome")
+
+
+def criar_categoria(nome, cor):
+    def fn(cur):
+        cur.execute("INSERT INTO categorias (nome, cor) VALUES (%s, %s) RETURNING id", (nome, cor))
+        return cur.fetchone()[0]
+    return _nome_unico(fn)
+
+
+def atualizar_categoria(id, nome, cor):
+    return _nome_unico(lambda cur: (cur.execute("UPDATE categorias SET nome=%s, cor=%s WHERE id=%s", (nome, cor, id)), cur.rowcount)[1])
+
+
+def excluir_categoria(id):
+    """Apaga a categoria; as movimentações dela ficam sem categoria e o classificador tenta de novo."""
+    def fn(cur):
+        cur.execute("DELETE FROM categorias WHERE id=%s", (id,))
+        apagou = cur.rowcount
+        if apagou:
+            _classificar(cur)
+        return apagou
+    return _rodar(fn)
+
+
 # ── Leitura e gravação ──────────────────────────────────────────────────────
 def salvar(transacoes):
     """Grava as transações do OFX e devolve quantas eram novas (as repetidas são ignoradas)."""
@@ -74,6 +185,7 @@ def salvar(transacoes):
         for t in transacoes:
             cur.execute(INSERT, (t.date.date(), t.amount, t.memo, t.id))
             inseridas += cur.rowcount  # 1 se inseriu, 0 se já existia
+        _classificar(cur)  # as novas já nascem com categoria sugerida
         return inseridas
     return _rodar(gravar)
 
@@ -82,8 +194,8 @@ def listar():
     """Todas as movimentações, da mais antiga para a mais nova."""
     def consultar(cur):
         cur.execute(
-            "SELECT id, data_movimentacao, valor, descricao, fitid FROM movimentacoes "
-            "ORDER BY data_movimentacao, id"
+            "SELECT id, data_movimentacao, valor, descricao, fitid, categoria_id, categoria_auto, categoria_confianca "
+            "FROM movimentacoes ORDER BY data_movimentacao, id"
         )
         return cur.fetchall()
     return _rodar(consultar)
@@ -100,7 +212,7 @@ def exportar_ofx(linhas):
     trans = "".join(
         f"<STMTTRN>\n<TRNTYPE>{'CREDIT' if v > 0 else 'DEBIT'}\n<DTPOSTED>{d:%Y%m%d}000000\n"
         f"<TRNAMT>{v:.2f}\n<FITID>{fitid}\n<MEMO>{esc(desc)}\n</STMTTRN>\n"
-        for _, d, v, desc, fitid in linhas
+        for _, d, v, desc, fitid, *_ in linhas
     )
     saldo = sum(l[2] for l in linhas)
     # cabeçalho + conta + lista de transações + saldo final
@@ -123,9 +235,17 @@ def _executar(sql, params):
     return _rodar(lambda cur: (cur.execute(sql, params), cur.rowcount)[1])
 
 
-def criar(data, valor, descricao):
-    # lançamento manual não vem do OFX, então ganha um fitid próprio (manual-<código aleatório>)
-    return _executar(INSERT, (data, valor, descricao, "manual-" + uuid.uuid4().hex))
+def criar(data, valor, descricao, categoria_id=None):
+    """Lançamento manual: ganha um fitid próprio (manual-<código>). Se a pessoa escolheu categoria, vale;
+    senão o classificador sugere uma."""
+    def fn(cur):
+        cur.execute(INSERT + " RETURNING id", (data, valor, descricao, "manual-" + uuid.uuid4().hex))
+        novo = cur.fetchone()[0]
+        if categoria_id:
+            cur.execute("UPDATE movimentacoes SET categoria_id=%s, categoria_auto=FALSE WHERE id=%s", (categoria_id, novo))
+        _classificar(cur)
+        return novo
+    return _rodar(fn)
 
 
 def atualizar(id, data, valor, descricao):
