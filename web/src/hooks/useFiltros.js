@@ -20,6 +20,7 @@ export const sem = (s) => s.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase
 
 // Interpreta o texto da busca: palavras soltas (todas precisam aparecer), -palavra (exclui) e "frase entre aspas"
 export function termosDe(busca) {
+  // palavras que devem aparecer e palavras que não podem aparecer
   const incluir = [], excluir = [];
   for (const [, frase, palavra] of busca.matchAll(/"([^"]+)"|(\S+)/g)) {
     const t = sem(frase ?? palavra);
@@ -35,6 +36,7 @@ const textoDe = (m) =>
 
 // Ordena a lista conforme a opção escolhida (devolve uma cópia, não altera a original)
 const ordenar = (lista, ordem) => {
+  // uma função de comparação para cada opção de ordenação
   const c = {
     "data-asc": (a, b) => a.data.localeCompare(b.data) || a.id - b.id,
     "data-desc": (a, b) => b.data.localeCompare(a.data) || b.id - a.id,
@@ -51,6 +53,7 @@ export default function useFiltros(movs, categorias = []) {
   const [f, setF] = useState(INICIAL);
   // set("tipo", "saidas") atualiza um filtro; limpar() volta tudo ao inicial
   const set = (k, v) => setF((s) => ({ ...s, [k]: v }));
+  // volta todos os filtros ao estado inicial
   const limpar = () => setF(INICIAL);
 
   // só recalcula quando algo muda (useMemo): termos da busca e período em datas
@@ -101,6 +104,7 @@ export default function useFiltros(movs, categorias = []) {
 
   // quantos filtros do painel "Filtros" estão ligados (número no botão) e se algum intervalo está invertido
   const avancados = ativos.filter((a) => ["periodo", "valor", "categoria"].includes(a.id)).length;
+  // true se o início do período (ou do valor) é maior que o fim
   const invertido = (faixa.de && faixa.ate && faixa.de > faixa.ate) || (f.min != null && f.max != null && f.min > f.max);
 
   return { f, set, limpar, termos, cronologicas, ordenadas, ativos, avancados, invertido };

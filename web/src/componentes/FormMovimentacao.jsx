@@ -1,3 +1,4 @@
+// FORMULÁRIO DE MOVIMENTAÇÃO: criar (com categoria opcional) ou editar, com máscara de dinheiro e seletor Entrada/Saída.
 import { useState } from "react";
 import { Girar } from "./Icones.jsx";
 import { moeda, centavosDe } from "../format.js";

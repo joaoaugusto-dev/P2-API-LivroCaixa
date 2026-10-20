@@ -1,3 +1,4 @@
+// NÚMERO ANIMADO: mostra um valor que "conta" até o número final.
 import useContagem from "../useContagem.js";
 
 // Mostra um número formatado que conta até `valor` quando `ativo` fica true (ex.: ao entrar na tela).

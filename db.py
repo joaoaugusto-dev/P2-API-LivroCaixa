@@ -122,6 +122,7 @@ def _classificar(cur):
 def definir_categoria(id, categoria_id):
     """A PESSOA escolheu (ou confirmou) a categoria: vira exemplo de treino e as sugestões são recalculadas.
     Devolve quantas classificações automáticas mudaram por causa disso (None se a movimentação não existe)."""
+    # o que roda dentro da transação (recebe o cursor do banco)
     def fn(cur):
         cur.execute(
             "UPDATE movimentacoes SET categoria_id=%s, categoria_auto=FALSE, categoria_confianca=NULL WHERE id=%s",
@@ -138,6 +139,7 @@ def reclassificar():
 
 def listar_categorias():
     """Cada categoria com quantas movimentações tem e a soma dos valores."""
+    # o que roda dentro da transação (recebe o cursor do banco)
     def fn(cur):
         cur.execute(
             "SELECT c.id, c.nome, c.cor, COUNT(m.id), COALESCE(SUM(m.valor), 0) FROM categorias c "
@@ -155,19 +157,23 @@ def _nome_unico(fn):
         raise ValueError("Já existe uma categoria com esse nome")
 
 
+# Cria uma categoria (nome único) e devolve o id.
 def criar_categoria(nome, cor):
+    # o que roda dentro da transação (recebe o cursor do banco)
     def fn(cur):
         cur.execute("INSERT INTO categorias (nome, cor) VALUES (%s, %s) RETURNING id", (nome, cor))
         return cur.fetchone()[0]
     return _nome_unico(fn)
 
 
+# Renomeia / muda a cor de uma categoria.
 def atualizar_categoria(id, nome, cor):
     return _nome_unico(lambda cur: (cur.execute("UPDATE categorias SET nome=%s, cor=%s WHERE id=%s", (nome, cor, id)), cur.rowcount)[1])
 
 
 def excluir_categoria(id):
     """Apaga a categoria; as movimentações dela ficam sem categoria e o classificador tenta de novo."""
+    # o que roda dentro da transação (recebe o cursor do banco)
     def fn(cur):
         cur.execute("DELETE FROM categorias WHERE id=%s", (id,))
         apagou = cur.rowcount
@@ -180,6 +186,7 @@ def excluir_categoria(id):
 # ── Leitura e gravação ──────────────────────────────────────────────────────
 def salvar(transacoes):
     """Grava as transações do OFX e devolve quantas eram novas (as repetidas são ignoradas)."""
+    # o que roda dentro da transação (recebe o cursor do banco)
     def gravar(cur):
         inseridas = 0
         for t in transacoes:
@@ -192,6 +199,7 @@ def salvar(transacoes):
 
 def listar():
     """Todas as movimentações, da mais antiga para a mais nova."""
+    # o que roda dentro da transação (recebe o cursor do banco)
     def consultar(cur):
         cur.execute(
             "SELECT id, data_movimentacao, valor, descricao, fitid, categoria_id, categoria_auto, categoria_confianca "
@@ -238,6 +246,7 @@ def _executar(sql, params):
 def criar(data, valor, descricao, categoria_id=None):
     """Lançamento manual: ganha um fitid próprio (manual-<código>). Se a pessoa escolheu categoria, vale;
     senão o classificador sugere uma."""
+    # o que roda dentro da transação (recebe o cursor do banco)
     def fn(cur):
         cur.execute(INSERT + " RETURNING id", (data, valor, descricao, "manual-" + uuid.uuid4().hex))
         novo = cur.fetchone()[0]
@@ -248,6 +257,7 @@ def criar(data, valor, descricao, categoria_id=None):
     return _rodar(fn)
 
 
+# Edita data, valor e descrição de uma movimentação.
 def atualizar(id, data, valor, descricao):
     return _executar(
         "UPDATE movimentacoes SET data_movimentacao=%s, valor=%s, descricao=%s WHERE id=%s",
@@ -255,6 +265,7 @@ def atualizar(id, data, valor, descricao):
     )
 
 
+# Apaga uma movimentação.
 def excluir(id):
     return _executar("DELETE FROM movimentacoes WHERE id=%s", (id,))
 

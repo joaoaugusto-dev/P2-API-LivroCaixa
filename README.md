@@ -25,7 +25,7 @@ Cinco módulos, escolhidos pelo seletor de perfil no topo (o botão de sol/lua a
 | **Inserção** | lançar uma movimentação ou importar um `.ofx` | Administrador geral, Inserção |
 | **Exportação** | baixar em `.ofx`, `.csv` ou Excel formatado (`.xlsx`), com período e tipo | Administrador geral, Exportação |
 | **Administração** | criar, editar e excluir; trocar a categoria com um clique | Administrador geral |
-| **Categorias** | revisar o que o sistema classificou, confirmar com um clique, criar/editar categorias | Administrador geral |
+| **Categorias** | revisar o que o sistema classificou, confirmar com um clique (ou todas de uma vez), criar/editar categorias | Administrador geral, Inserção |
 
 > Os perfis só organizam a tela. **Não há login nem controle de acesso de verdade**: qualquer pessoa que abra a página pode trocar de perfil, e a API aceita qualquer pedido. Por isso o projeto serve para estudo e uso local, não para ficar exposto na internet.
 
@@ -61,6 +61,7 @@ Funciona no celular, sem rolagem horizontal:
 - **Aprende com você:** cada categoria que você confirma ou troca vira um exemplo de treino (peso 3x) e as outras sugestões são recalculadas na hora. Exemplo real do projeto: "ALUGUEL ESCRITORIO" é ambíguo (47% de certeza, então o sistema não aplica sozinho); depois de você ensinar uma vez, "ALUGUEL SALA 2" já entra como Aluguel com 91%.
 - **Só aplica quando está seguro:** abaixo de 60% de confiança a movimentação fica sem categoria para você decidir. As sugestões automáticas **não entram no treino**, então o sistema não reforça os próprios erros.
 - **Fácil de usar:** clique no chip de categoria de qualquer linha para buscar, trocar, remover ou **criar uma categoria na hora**; o módulo Categorias reúne tudo que precisa de revisão e tem "Confirmar todas as sugestões" e "Reaprender".
+- **Aprovação com movimento:** o ✓ "estala" com um anel e o traço se desenha; ao aprovar em massa, as linhas piscam em verde e recolhem em cascata, e a fila vazia mostra um ✓ que se desenha.
 - **Aparece nas análises:** filtro por categoria, gráfico "Para onde foi o dinheiro" e coluna Categoria na exportação para Excel e CSV.
 
 ### Destaques
@@ -68,6 +69,7 @@ Funciona no celular, sem rolagem horizontal:
 - **Busca aprofundada:** ignora acento e maiúsculas e procura em descrição, valor e data. Várias palavras (todas precisam aparecer), `-palavra` exclui, `"aspas"` para uma frase. A tecla `/` foca o campo.
 - **Filtros:** tipo, período (atalhos ou datas), faixa de valor e ordenação, com chips removíveis.
 - **Exportação:** OFX (pode ser reimportado sem duplicar), CSV em português e Excel com totais em fórmulas.
+- **Gráficos com estilo à escolha:** cada gráfico tem botões de ícone no canto para trocar o tipo (saldo: degraus, linha ou área; entradas/saídas: colunas, linhas ou saldo do período; ranking: barras ou colunas; categorias: barra empilhada, rosca ou barras). A escolha fica salva no navegador.
 - **Carregamento:** esqueleto com o mesmo formato da página e aviso quando o banco serverless está acordando.
 - **Movimento:** entrada em sequência, números que contam, gráficos que crescem e troca de tema em círculo, respeitando "reduzir movimento" do sistema.
 

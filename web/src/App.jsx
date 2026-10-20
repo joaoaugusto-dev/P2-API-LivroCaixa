@@ -16,6 +16,7 @@ const TELAS = { analise: Analise, insercao: Insercao, exportacao: Exportacao, ad
 // Botão sol/lua: troca o tema claro/escuro, salva a escolha e anima a troca
 function BotaoTema() {
   const [tema, setTema] = useState(document.documentElement.dataset.tema);
+  // Ao clicar: troca o tema, guarda a escolha e anima
   const alternar = (e) => {
     // 1) decide o próximo tema e grava no <html> (o CSS usa data-tema para trocar as cores)
     const novo = tema === "escuro" ? "claro" : "escuro";

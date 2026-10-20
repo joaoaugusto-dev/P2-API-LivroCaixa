@@ -6,7 +6,7 @@ import { sem } from "../hooks/useFiltros.js";
 // A cor da categoria é um número de 1 a 8 que aponta para uma variável do CSS (muda sozinha no tema escuro)
 export const corDe = (n) => (n ? `var(--cat-${n})` : "var(--borda-forte)");
 
-const check = <path d="M20 6 9 17l-5-5" />;
+const check = <path d="M20 6 9 17l-5-5" pathLength="1" />; // pathLength=1 deixa o traço animável (desenha o ✓)
 
 // Bolinha colorida ao lado do nome da categoria
 export function Ponto({ cor }) {
@@ -26,7 +26,8 @@ export function Cores({ valor, onChange }) {
 
 // Mostra a categoria de uma movimentação. Se receber `onEscolher`, o clique abre um menu com busca para
 // trocar, remover ou CRIAR uma categoria na hora. Sugestões automáticas ganham "auto" e um ✓ para confirmar.
-export function ChipCategoria({ mov, categorias, onEscolher, onCriar }) {
+// `confirmando` = a confirmação desta linha está animando; `onConfirmar(mov)` = clique no ✓ (anima e depois grava).
+export function ChipCategoria({ mov, categorias, onEscolher, onCriar, onConfirmar, confirmando }) {
   const cat = categorias.find((c) => c.id === mov.categoria_id);
   const [aberto, setAberto] = useState(false);
   const [busca, setBusca] = useState("");
@@ -49,9 +50,11 @@ export function ChipCategoria({ mov, categorias, onEscolher, onCriar }) {
   // somente leitura (Análise): só mostra
   if (!onEscolher) return <span className={"chip-cat" + (cat ? "" : " vazia")} title={certeza ? `Sugerida automaticamente (${certeza}% de certeza)` : undefined}>{rotulo}{mov.auto && <span className="auto-marca">auto</span>}</span>;
 
+  // escolhe uma categoria (ou null para remover): fecha o menu e avisa quem usa o chip
   const escolher = (id) => { setAberto(false); setBusca(""); setErro(""); onEscolher(id); };
   const filtradas = categorias.filter((c) => sem(c.nome).includes(sem(busca)));
   const existe = categorias.some((c) => sem(c.nome) === sem(busca.trim()));
+  // cria a categoria digitada na busca e já a atribui à movimentação
   const criar = async () => {
     const r = await onCriar(busca.trim());
     if (r?.erro) return setErro(r.erro);
@@ -69,11 +72,18 @@ export function ChipCategoria({ mov, categorias, onEscolher, onCriar }) {
         onClick={() => setAberto(!aberto)}
       >
         {rotulo}
-        {mov.auto && <span className="auto-marca">auto</span>}
+        {mov.auto && <span className={"auto-marca" + (confirmando ? " some" : "")}>auto</span>}
       </button>
       {/* ✓ confirma a sugestão com um clique: ela vira exemplo para o sistema aprender */}
       {mov.auto && cat && (
-        <button type="button" className="confirmar-cat" aria-label={`Confirmar categoria ${cat.nome}`} title="Confirmar (o sistema aprende com isso)" onClick={() => escolher(cat.id)}>
+        <button
+          type="button"
+          className={"confirmar-cat" + (confirmando ? " confirmado" : "")}
+          aria-label={`Confirmar categoria ${cat.nome}`}
+          title="Confirmar (o sistema aprende com isso)"
+          disabled={confirmando}
+          onClick={() => (onConfirmar ? onConfirmar(mov) : escolher(cat.id))}
+        >
           <Icone d={check} />
         </button>
       )}

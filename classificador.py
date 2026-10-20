@@ -32,6 +32,7 @@ PADRAO = {
 }
 
 
+# Tira acentos e deixa minúsculo ("Energia Elétrica" -> "energia eletrica")
 def _sem_acento(texto):
     return unicodedata.normalize("NFD", texto).encode("ascii", "ignore").decode().lower()
 

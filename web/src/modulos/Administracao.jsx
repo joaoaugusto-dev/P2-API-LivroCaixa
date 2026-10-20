@@ -1,3 +1,4 @@
+// MÓDULO ADMINISTRAÇÃO: criar, editar e excluir movimentações, com busca, filtros e categorias.
 import { useRef, useState } from "react";
 import FormMovimentacao from "../componentes/FormMovimentacao.jsx";
 import Tabela from "../componentes/Tabela.jsx";
@@ -11,7 +12,7 @@ import { moeda, dataCompleta } from "../format.js";
 // Lista com filtros + botões de editar/excluir; criar e editar usam o mesmo formulário num pop-up,
 // e excluir pede confirmação.
 export default function Administracao({ extrato }) {
-  const { movs, ocupado, salvar, excluir, atualizando, destaque, saindo, categorias, definirCategoria, criarEAtribuir } = extrato;
+  const { movs, ocupado, salvar, excluir, atualizando, destaque, saindo, categorias, definirCategoria, criarEAtribuir, confirmarCategoria, confirmando } = extrato;
   const filtros = useFiltros(movs, categorias);
   // referências aos dois pop-ups nativos (<dialog>): formulário e confirmação de exclusão
   const dialogoForm = useRef();
@@ -22,6 +23,7 @@ export default function Administracao({ extrato }) {
 
   // abre o formulário vazio (nova) ou preenchido (editar); a `chave` nova recria o formulário do zero
   const abrirForm = (m) => { setEdicao((e) => ({ chave: e.chave + 1, m })); dialogoForm.current.showModal(); };
+  // guarda qual movimentação será apagada e abre o pop-up de confirmação
   const pedirExclusao = (m) => { setAlvo(m); dialogoExcluir.current.showModal(); };
 
   // grava (cria ou edita conforme houver id) e só fecha o pop-up se não deu erro
@@ -47,7 +49,7 @@ export default function Administracao({ extrato }) {
       {movs.length ? (
         <>
           <Filtros filtros={filtros} total={movs.length} mostradas={filtros.ordenadas.length} categorias={categorias} />
-          <Tabela movs={filtros.ordenadas} termos={filtros.termos.incluir} aoLimpar={filtros.limpar} atualizando={atualizando} destaque={destaque} saindo={saindo} onEditar={abrirForm} onExcluir={pedirExclusao} categorias={categorias} onCategoria={definirCategoria} onCriarCategoria={criarEAtribuir} />
+          <Tabela movs={filtros.ordenadas} termos={filtros.termos.incluir} aoLimpar={filtros.limpar} atualizando={atualizando} destaque={destaque} saindo={saindo} onEditar={abrirForm} onExcluir={pedirExclusao} categorias={categorias} onCategoria={definirCategoria} onCriarCategoria={criarEAtribuir} onConfirmar={confirmarCategoria} confirmando={confirmando} />
         </>
       ) : (
         <Vazio />

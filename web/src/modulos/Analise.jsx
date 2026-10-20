@@ -1,3 +1,4 @@
+// MÓDULO ANÁLISE: saldo, KPIs, gráficos (com estilos trocáveis) e lista, tudo filtrável.
 import { useMemo } from "react";
 import Grafico from "../Grafico.jsx";
 import Tabela from "../componentes/Tabela.jsx";

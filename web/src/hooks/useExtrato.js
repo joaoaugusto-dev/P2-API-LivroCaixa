@@ -1,3 +1,4 @@
+// DADOS DA APLICAÇÃO (hook central): lista de movimentações e categorias, todas as operações e os estados de carregamento.
 import { useCallback, useEffect, useRef, useState } from "react";
 import * as api from "../api.js";
 import { plural } from "../format.js";
@@ -19,6 +20,8 @@ export default function useExtrato() {
   const [destaque, setDestaque] = useState(new Set());
   const [saindo, setSaindo] = useState(null);
   const anteriores = useRef(null);
+  // ids das movimentações cuja confirmação está ANIMANDO agora (id -> posição, para o efeito em cascata)
+  const [confirmando, setConfirmando] = useState(new Map());
 
   // Busca a lista no servidor. Compara com a anterior para destacar linhas novas ou editadas.
   const carregar = useCallback((editados = []) => {
@@ -96,11 +99,33 @@ export default function useExtrato() {
     carregar();
   };
 
-  // Confirma várias sugestões de uma vez (cada uma vira exemplo de treino)
+  // Espera a animação de confirmação terminar antes de gravar (sem espera se a pessoa pediu menos movimento)
+  const esperar = (ms) => new Promise((ok) => setTimeout(ok, matchMedia("(prefers-reduced-motion: reduce)").matches ? 0 : ms));
+  // liga a animação nas movimentações indicadas ([id, posição])
+  const marcar = (pares) => setConfirmando((m) => new Map([...m, ...pares]));
+  // desliga a animação (depois de gravar)
+  const desmarcar = (ids) => setConfirmando((m) => new Map([...m].filter(([id]) => !ids.includes(id))));
+
+  // CONFIRMAR UMA sugestão (o ✓): toca a animação (~0,65 s) e só então grava. Cada confirmação vira exemplo de treino.
+  const confirmarCategoria = async (mov) => {
+    if (confirmando.has(mov.id)) return; // evita clique duplo
+    marcar([[mov.id, 0]]);
+    await esperar(650);
+    await definirCategoria(mov.id, mov.categoria_id);
+    desmarcar([mov.id]);
+  };
+
+  // CONFIRMAR TODAS de uma vez: as linhas animam em cascata (70 ms entre uma e outra) e depois tudo é gravado
   const confirmarTodas = async (lista) => {
+    if (!lista.length) return;
+    marcar(lista.map((m, i) => [m.id, i]));
+    await esperar(650 + lista.length * 70);
+    const ids = new Set(lista.map((m) => m.id));
+    setMovs((l) => l.map((m) => (ids.has(m.id) ? { ...m, auto: false, confianca: null } : m)));
     for (const m of lista) await api.definirCategoria(m.id, m.categoria_id);
     setAviso(`${plural(lista.length, "sugestão confirmada", "sugestões confirmadas")}. O sistema aprendeu com todas.`);
-    carregar();
+    await carregar();
+    desmarcar(lista.map((m) => m.id));
   };
 
   // Cria uma categoria (devolve o texto do erro, ou {id} se deu certo)
@@ -186,5 +211,5 @@ export default function useExtrato() {
     carregar();
   };
 
-  return { movs, categorias, criarEAtribuir, definirCategoria, confirmarTodas, criarCategoria, editarCategoria, excluirCategoria, reaprender, erro, setErro, aviso, ocupado, atualizando, demora, destaque, saindo, carregar, salvar, excluir, importar };
+  return { movs, categorias, confirmando, confirmarCategoria, criarEAtribuir, definirCategoria, confirmarTodas, criarCategoria, editarCategoria, excluirCategoria, reaprender, erro, setErro, aviso, ocupado, atualizando, demora, destaque, saindo, carregar, salvar, excluir, importar };
 }

@@ -1,3 +1,4 @@
+// CONFIGURAÇÃO DO VITE: servidor de desenvolvimento do front-end e ponte (proxy) para a API Python.
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
 

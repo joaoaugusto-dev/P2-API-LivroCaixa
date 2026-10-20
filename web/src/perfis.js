@@ -12,6 +12,7 @@ export const MODULOS = {
 export const PERFIS = {
   admin: { nome: "Administrador geral", modulos: ["analise", "insercao", "exportacao", "administracao", "categorias"] },
   analise: { nome: "Análise", modulos: ["analise"] },
-  insercao: { nome: "Inserção", modulos: ["insercao"] },
+  // quem insere dados também revisa as categorias das movimentações novas
+  insercao: { nome: "Inserção", modulos: ["insercao", "categorias"] },
   exportacao: { nome: "Exportação", modulos: ["exportacao"] },
 };

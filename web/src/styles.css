@@ -23,6 +23,7 @@
   --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
   --ease-in-out: cubic-bezier(0.77, 0, 0.175, 1);
   --ouro-claro: #fbe7b0;
+  --confirma-bg: #d8efe5;
   --hero: #0d3a40;
   --campo: #ffffff;
   --realce: #e3ece8;
@@ -60,6 +61,7 @@
   --entrada: #2fa57c;
   --saida: #e4604a;
   --ouro-claro: #4a3b13;
+  --confirma-bg: #17382f;
   --campo: #0b1c20;
   --realce: #1c3a3f;
   --realce-2: #27484e;
@@ -568,8 +570,9 @@ button.chip-cat:active { transform: scale(.96); }
 .resumo-aprendizado { color: var(--suave); margin: 0 0 8px; }
 .resumo-aprendizado strong { color: var(--tinta); }
 .revisao { list-style: none; margin: 8px 0 0; padding: 0; }
-.revisao li { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; gap: 6px 16px; align-items: center; padding: 12px 0; border-bottom: 1px solid var(--linha); }
-.revisao li:last-child { border-bottom: 0; }
+.revisao .rev-li { display: grid; grid-template-rows: 1fr; border-bottom: 1px solid var(--linha); }
+.revisao .rev-li:last-child { border-bottom: 0; }
+.rev-corpo { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; gap: 6px 16px; align-items: center; padding: 12px 0; min-height: 0; }
 .rev-texto { display: grid; min-width: 0; }
 .rev-texto strong { font-weight: 500; overflow-wrap: anywhere; }
 .rev-texto span { color: var(--suave); font-size: .85rem; }
@@ -590,8 +593,8 @@ button.chip-cat:active { transform: scale(.96); }
 .como-aprende ol { margin: 0; padding-left: 20px; display: grid; gap: 8px; color: var(--suave); }
 .como-aprende strong { color: var(--tinta); font-weight: 600; }
 @media (max-width: 559px) {
-  .revisao li { grid-template-columns: minmax(0, 1fr) auto; }
-  .revisao li .chip-wrap { grid-column: 1 / -1; }
+  .rev-corpo { grid-template-columns: minmax(0, 1fr) auto; }
+  .rev-corpo .chip-wrap { grid-column: 1 / -1; }
   .cat-linha { flex-wrap: wrap; }
   .cat-uso { order: 3; flex-basis: 100%; }
   .lista-cat li { grid-template-columns: 12px minmax(0, 1fr) auto; }
@@ -602,3 +605,87 @@ button.chip-cat:active { transform: scale(.96); }
 /* botão secundário dentro do cabeçalho de módulo (a regra geral do cabeçalho deixava ele escuro) */
 .cabecalho-modulo button.sec { background: transparent; color: var(--tinta); border: 1px solid var(--borda-forte); }
 .cabecalho-modulo button.sec:hover { background: transparent; border-color: var(--tinta); }
+
+/* ---------- MOVIMENTO DA APROVAÇÃO DE CATEGORIAS ---------- */
+/* ✓ individual: o botão "estala" com um anel que se expande e o traço do ✓ se desenha; o selo "auto" some */
+.auto-marca { transition: opacity 200ms var(--ease-out), transform 200ms var(--ease-out); }
+.auto-marca.some { opacity: 0; transform: scale(.6); }
+.confirmar-cat.confirmado { animation: estalo 420ms var(--ease-out), anel 620ms var(--ease-out); }
+.confirmar-cat.confirmado svg path { stroke-dasharray: 1; animation: tracar 380ms var(--ease-out) backwards; }
+@keyframes estalo { 35% { transform: scale(1.4); } }
+@keyframes anel { from { box-shadow: 0 0 0 0 color-mix(in srgb, var(--entrada) 55%, transparent); } to { box-shadow: 0 0 0 14px transparent; } }
+@keyframes tracar { from { stroke-dashoffset: 1; } }
+/* Linha da fila de revisão: pisca em verde e recolhe deslizando (em cascata na aprovação em massa, via --d) */
+.rev-li.confirmando { animation: rev-sai 780ms var(--ease-in-out) calc(var(--d) * 70ms) forwards; }
+.rev-colapsa { min-height: 0; }
+.rev-li.confirmando .rev-colapsa { overflow: hidden; }
+.rev-li.confirmando .rev-corpo { animation: rev-pisca 780ms var(--ease-out) calc(var(--d) * 70ms) forwards; }
+@keyframes rev-pisca { 0% { background-color: transparent; } 20%, 40% { background-color: var(--confirma-bg); } 100% { background-color: var(--confirma-bg); } }
+@keyframes rev-sai { 0%, 40% { grid-template-rows: 1fr; opacity: 1; transform: none; } 100% { grid-template-rows: 0fr; opacity: 0; transform: translateX(36px); } }
+.aprovando { cursor: progress; }
+/* Fila vazia: o círculo e o ✓ se desenham */
+.tudo-revisado { display: flex; align-items: center; gap: 16px; padding: 18px 0 6px; }
+.tudo-revisado svg { width: 52px; height: 52px; flex: none; fill: none; stroke: var(--entrada); stroke-width: 3; stroke-linecap: round; stroke-linejoin: round; }
+.tudo-revisado circle, .tudo-revisado path { stroke-dasharray: 1; animation: tracar 700ms var(--ease-out) backwards; }
+.tudo-revisado path { animation-delay: 380ms; }
+.tudo-revisado strong { font: 700 1.1rem var(--titulo); }
+.tudo-revisado p { margin: 2px 0 0; }
+
+/* ---------- BOTÕES PARA TROCAR O TIPO DO GRÁFICO + ESTILOS NOVOS ---------- */
+/* Faixa no topo de cada gráfico: o que há à esquerda (legenda/seletor) e os botões de tipo à direita */
+.grafico-topo { display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 8px; }
+.grafico-topo .legenda { margin: 0; }
+.grafico-topo .filtros { flex: 1 1 180px; max-width: 260px; }
+.grafico .grafico-topo { justify-content: flex-end; margin-bottom: 6px; }
+.tipo-grafico { display: inline-flex; gap: 2px; padding: 3px; border-radius: 10px; background: var(--fundo); }
+.tipo-grafico button { width: 32px; height: 28px; border: 0; border-radius: 7px; background: none; color: var(--suave); display: grid; place-items: center; cursor: pointer; padding: 0; transition: background-color 160ms var(--ease-out), color 160ms var(--ease-out), transform 120ms var(--ease-out); }
+.tipo-grafico button:active { transform: scale(.9); }
+.tipo-grafico button[aria-pressed="true"] { background: var(--primario); color: var(--sobre-primario); }
+@media (hover: hover) and (pointer: fine) { .tipo-grafico button[aria-pressed="false"]:hover { color: var(--tinta); } }
+.tipo-grafico svg { width: 17px; height: 17px; }
+.tipo-grafico.escuro { background: rgb(255 255 255 / .08); }
+.tipo-grafico.escuro button { color: #9fbbb8; }
+.tipo-grafico.escuro button[aria-pressed="true"] { background: var(--ouro); color: #10262b; }
+@media (hover: hover) and (pointer: fine) { .tipo-grafico.escuro button[aria-pressed="false"]:hover { color: #fff; } }
+/* Saldo: pontos do estilo "linha" */
+.grafico .marca-saldo { fill: var(--ouro); stroke: var(--hero); stroke-width: 2; }
+/* Entradas e saídas: estilo "linhas" (as linhas se desenham e os pontos surgem em sequência) */
+.fluxo .l-entrada, .fluxo .l-saida { fill: none; stroke-width: 2.5; stroke-linejoin: round; stroke-linecap: round; stroke-dasharray: 1; stroke-dashoffset: 1; }
+.fluxo .l-entrada { stroke: var(--entrada); }
+.fluxo .l-saida { stroke: var(--saida); }
+.fluxo .desenha { stroke-dashoffset: 0; animation: tracar 1100ms var(--ease-out) backwards; }
+.fluxo .p-entrada { fill: var(--entrada); }
+.fluxo .p-saida { fill: var(--saida); }
+.fluxo .pontos-fluxo { opacity: 0; }
+.fluxo .pontos-fluxo.aparece { opacity: 1; animation: surgir 400ms var(--ease-out) calc(300ms + var(--i) * 30ms) backwards; }
+@keyframes surgir { from { opacity: 0; } }
+/* Ranking: estilo "colunas" */
+.ranking ol.rk-colunas { grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 10px; align-items: end; }
+.rk-colunas li { justify-items: center; text-align: center; min-width: 0; overflow: hidden; }
+.rk-valor { font: 500 .74rem var(--mono); white-space: nowrap; }
+.rk-trilho { display: flex; align-items: flex-end; justify-content: center; height: 150px; width: 100%; }
+.rk-coluna { display: block; width: min(100%, 38px); height: calc(var(--p) * 100%); border-radius: 6px 6px 0 0; transform-origin: bottom; }
+.rk-coluna.entrada { background: var(--entrada); }
+.rk-coluna.saida { background: var(--saida); }
+.rk-colunas li:not(.cresce) .rk-coluna { transform: scaleY(0); }
+.rk-colunas li.cresce .rk-coluna { animation: crescer 640ms var(--ease-out) calc(var(--i) * 80ms) backwards; }
+.rk-nome { max-width: 100%; hyphens: auto; font-size: .72rem; color: var(--suave); line-height: 1.25; overflow: hidden; overflow-wrap: anywhere; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
+/* Por categoria: estilos "rosca" e "barras" */
+.cat-visual.modo-rosca { display: grid; grid-template-columns: minmax(0, 210px) minmax(0, 1fr); gap: 24px; align-items: center; }
+.rosca { width: 100%; max-width: 220px; margin: 0 auto; }
+.arco { fill: none; stroke: var(--cat); stroke-width: 20; }
+.arco:not(.cresce) { opacity: 0; }
+@keyframes arco-enche { from { stroke-dasharray: 0 100; } }
+.arco.cresce { animation: arco-enche 700ms var(--ease-out) calc(var(--i) * 90ms) backwards; }
+.rosca-rotulo { fill: var(--suave); font-size: 7px; }
+.rosca-total { fill: var(--tinta); font: 600 8px var(--mono); }
+.modo-barras .lista-cat li { row-gap: 6px; }
+.lc-trilho { grid-column: 1 / -1; height: 8px; border-radius: 4px; background: var(--fundo); }
+.lc-barra { display: block; height: 100%; width: calc(var(--p) * 100%); background: var(--cat); border-radius: 4px; clip-path: inset(0 100% 0 0 round 4px); }
+.lc-barra.cresce { clip-path: inset(0 0 0 0 round 4px); animation: preencher 640ms var(--ease-out) calc(var(--i) * 80ms) backwards; }
+@media (max-width: 559px) { .cat-visual.modo-rosca { grid-template-columns: 1fr; } }
+/* No painel principal (telas largas) os botões do gráfico de saldo ficam no canto, alinhados ao título */
+@media (min-width: 880px) {
+  .hero-saldo { position: relative; }
+  .hero-saldo .grafico-topo { position: absolute; top: 0; right: 0; margin: 0; }
+}

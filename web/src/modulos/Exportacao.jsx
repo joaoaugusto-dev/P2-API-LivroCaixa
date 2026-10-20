@@ -1,3 +1,4 @@
+// MÓDULO EXPORTAÇÃO: baixar o extrato em OFX, CSV ou Excel, com período e tipo.
 import { useMemo, useState } from "react";
 import { URL_EXPORTAR } from "../api.js";
 import Segmentos from "../componentes/Segmentos.jsx";
@@ -6,6 +7,7 @@ import { moeda, dataCompleta } from "../format.js";
 
 // Opções dos seletores de tipo e de formato
 const TIPOS = [["todas", "Todas"], ["entradas", "Só entradas"], ["saidas", "Só saídas"]];
+// Formatos disponíveis: [id, nome]
 const FORMATOS = [["ofx", "OFX"], ["csv", "CSV"], ["xlsx", "Excel"]];
 
 // Frase que explica cada formato de arquivo
@@ -17,8 +19,11 @@ const DICAS = {
 
 // Gera o CSV aqui no navegador (sem servidor): separador ; e vírgula decimal para abrir direto no Excel
 function baixarCsv(linhas, nome, categorias) {
+  // escapa aspas para o texto caber numa célula do CSV
   const celula = (t) => `"${String(t).replace(/"/g, '""')}"`;
+  // nome da categoria (ou "Sem categoria")
   const nomeDe = (id) => categorias.find((c) => c.id === id)?.nome ?? "Sem categoria";
+  // monta o CSV: cabeçalho + uma linha por movimentação
   const corpo = ["Data;Descrição;Valor;Categoria", ...linhas.map((m) => [dataCompleta(m.data), celula(m.descricao), m.valor.toFixed(2).replace(".", ","), celula(nomeDe(m.categoria_id))].join(";"))].join("\r\n");
   const url = URL.createObjectURL(new Blob(["﻿" + corpo], { type: "text/csv;charset=utf-8" }));
   const a = Object.assign(document.createElement("a"), { href: url, download: nome + ".csv" });
@@ -48,12 +53,14 @@ export default function Exportacao({ extrato }) {
     ),
     [movs, faixa.de, faixa.ate, tipo]
   );
+  // soma os valores das movimentações que passam no filtro f
   const soma = (f) => linhas.filter(f).reduce((s, m) => s + m.valor, 0);
   const pronto = linhas.length > 0 && !invalido;
 
   // monta o link de download com os filtros na URL (?de=...&ate=...&tipo=...&formato=...)
   const params = new URLSearchParams({ ...(formato === "xlsx" && { formato }), ...(faixa.de && { de: faixa.de }), ...(faixa.ate && { ate: faixa.ate }), ...(tipo !== "todas" && { tipo }) });
   const href = URL_EXPORTAR + (params.size ? "?" + params : "");
+  // nome do arquivo (inclui período e tipo)
   const nomeCsv = ["extrato", faixa.de, faixa.ate, tipo !== "todas" && tipo].filter(Boolean).join("-");
 
   return (

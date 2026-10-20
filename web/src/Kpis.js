@@ -34,21 +34,27 @@ export function calcular(movs) {
 
 // Soma as saídas de cada data e devolve a data em que mais dinheiro saiu
 function diaMaisPesado(saidas) {
+  // soma as saídas de cada data
   const porDia = {};
   for (const m of saidas) (porDia[m.data] ??= { data: m.data, valor: 0, n: 0 }, porDia[m.data].valor += m.valor, porDia[m.data].n++);
   return Object.values(porDia).reduce((a, b) => (!a || b.valor < a.valor ? b : a), null);
 }
 
 const DIA = 86400000;
+// data "AAAA-MM-DD" -> milissegundos em UTC (evita erro de fuso horário)
 const utc = (iso) => Date.UTC(+iso.slice(0, 4), +iso.slice(5, 7) - 1, +iso.slice(8, 10));
+// milissegundos -> data "AAAA-MM-DD"
 const isoDe = (ms) => new Date(ms).toISOString().slice(0, 10);
 
 // Agrupa por dia (ou por semana, se o período passa de 45 dias) para o gráfico de colunas. Preenche os dias vazios.
 export function porPeriodo(movs) {
   if (!movs.length) return { semanal: false, itens: [] };
   const ini = utc(movs[0].data), fim = utc(movs.at(-1).data);
+  // períodos longos (mais de 45 dias) são agrupados por semana
   const semanal = (fim - ini) / DIA > 45;
+  // acha a segunda-feira da semana de uma data
   const segunda = (ms) => ms - ((new Date(ms).getUTCDay() + 6) % 7) * DIA;
+  // a chave de agrupamento: o dia, ou a segunda-feira da semana
   const chave = (iso) => (semanal ? segunda(utc(iso)) : utc(iso));
   const itens = new Map();
   for (let t = chave(movs[0].data); t <= chave(movs.at(-1).data); t += semanal ? 7 * DIA : DIA)

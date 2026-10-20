@@ -1,3 +1,4 @@
+// PAINEL DE BUSCA E FILTROS: campo de busca, tipo, ordenação, período, faixa de valor e categoria (a lógica está em hooks/useFiltros.js).
 import { useEffect, useRef, useState } from "react";
 import Segmentos from "./Segmentos.jsx";
 import { Icone } from "./Icones.jsx";
@@ -8,6 +9,7 @@ import { moeda, centavosDe } from "../format.js";
 // Ícones SVG da busca (lupa) e do chip removível (×); TIPOS = opções do seletor Todas/Entradas/Saídas
 const lupa = <><circle cx="11" cy="11" r="7" /><path d="m21 21-4.3-4.3" /></>;
 const fechar = <path d="M18 6 6 18M6 6l12 12" />;
+// Opções do seletor Todas / Entradas / Saídas
 const TIPOS = [["todas", "Todas"], ["entradas", "Entradas"], ["saidas", "Saídas"]];
 
 // Campo de dinheiro com máscara para a faixa de valor. Guarda centavos; vazio (null) = sem limite.
