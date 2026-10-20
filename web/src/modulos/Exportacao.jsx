@@ -4,16 +4,18 @@ import Segmentos from "../componentes/Segmentos.jsx";
 import { PERIODOS, faixaDe } from "../periodos.js";
 import { moeda, dataCompleta } from "../format.js";
 
+// Opções dos seletores de tipo e de formato
 const TIPOS = [["todas", "Todas"], ["entradas", "Só entradas"], ["saidas", "Só saídas"]];
 const FORMATOS = [["ofx", "OFX"], ["csv", "CSV"], ["xlsx", "Excel"]];
 
+// Frase que explica cada formato de arquivo
 const DICAS = {
   ofx: "Formato dos bancos. Se importado de novo, tudo é reconhecido como já existente.",
   csv: "Texto simples para abrir no Excel ou Google Planilhas, sem formatação.",
   xlsx: "Planilha do Excel já formatada com as cores do Livro-caixa, com totais que se recalculam se você editar.",
 };
 
-// CSV em pt-BR para abrir direto no Excel (separador ; e virgula decimal, com BOM)
+// Gera o CSV aqui no navegador (sem servidor): separador ; e vírgula decimal para abrir direto no Excel
 function baixarCsv(linhas, nome) {
   const celula = (t) => `"${String(t).replace(/"/g, '""')}"`;
   const corpo = ["Data;Descrição;Valor", ...linhas.map((m) => [dataCompleta(m.data), celula(m.descricao), m.valor.toFixed(2).replace(".", ",")].join(";"))].join("\r\n");
@@ -23,7 +25,8 @@ function baixarCsv(linhas, nome) {
   URL.revokeObjectURL(url);
 }
 
-// baixa o que esta no banco, com periodo, tipo e formato escolhidos
+// MÓDULO EXPORTAÇÃO: escolhe período, tipo e formato e baixa o arquivo.
+// OFX e Excel são gerados pela API; o CSV é gerado aqui. A caixa ao lado mostra o que será baixado.
 export default function Exportacao({ extrato }) {
   const { movs } = extrato;
   const [periodo, setPeriodo] = useState("tudo");
@@ -32,9 +35,11 @@ export default function Exportacao({ extrato }) {
   const [tipo, setTipo] = useState("todas");
   const [formato, setFormato] = useState("ofx");
 
+  // período escolhido -> datas de/até (e aviso se estiverem invertidas)
   const faixa = faixaDe(periodo, de, ate);
   const invalido = faixa.de && faixa.ate && faixa.de > faixa.ate;
 
+  // as movimentações que entram no arquivo (mesmo filtro que o servidor aplica)
   const linhas = useMemo(
     () => movs.filter((m) =>
       (!faixa.de || m.data >= faixa.de) && (!faixa.ate || m.data <= faixa.ate) &&
@@ -45,12 +50,14 @@ export default function Exportacao({ extrato }) {
   const soma = (f) => linhas.filter(f).reduce((s, m) => s + m.valor, 0);
   const pronto = linhas.length > 0 && !invalido;
 
+  // monta o link de download com os filtros na URL (?de=...&ate=...&tipo=...&formato=...)
   const params = new URLSearchParams({ ...(formato === "xlsx" && { formato }), ...(faixa.de && { de: faixa.de }), ...(faixa.ate && { ate: faixa.ate }), ...(tipo !== "todas" && { tipo }) });
   const href = URL_EXPORTAR + (params.size ? "?" + params : "");
   const nomeCsv = ["extrato", faixa.de, faixa.ate, tipo !== "todas" && tipo].filter(Boolean).join("-");
 
   return (
     <div className="exportar-grade">
+      {/* OPÇÕES: período, o que incluir e formato */}
       <section className="painel">
         <h2>Exportar extrato</h2>
 
@@ -74,6 +81,7 @@ export default function Exportacao({ extrato }) {
         <p className="nota">{DICAS[formato]}</p>
       </section>
 
+      {/* RESUMO do que será baixado + botão de download (CSV é gerado aqui; OFX/Excel vêm da API) */}
       <aside className="painel resultado" aria-live="polite">
         <h2>O que será baixado</h2>
         <dl className="resumo-export">

@@ -1,3 +1,5 @@
+"""DESAFIO EXTRA: camada de banco (PostgreSQL no Neon). Lê o OFX, grava sem duplicar, lista, edita,
+exclui e exporta. É o único arquivo que fala com o banco; a API (api.py) só chama as funções daqui."""
 import os
 import uuid
 from datetime import date
@@ -7,9 +9,10 @@ from psycopg2.pool import ThreadedConnectionPool
 from dotenv import load_dotenv
 from ofxparse import OfxParser
 
-load_dotenv()
+load_dotenv()  # carrega DATABASE_URL do arquivo .env (que fica fora do git)
 
-# fitid e o identificador unico da transacao no OFX; o UNIQUE impede duplicatas
+# ── SQL ─────────────────────────────────────────────────────────────────────
+# Tabela do enunciado + `fitid`: o id único de cada transação no OFX. O UNIQUE é o que impede duplicatas.
 DDL = """
 CREATE TABLE IF NOT EXISTS movimentacoes (
     id SERIAL PRIMARY KEY,
@@ -20,6 +23,7 @@ CREATE TABLE IF NOT EXISTS movimentacoes (
 );
 """
 
+# Se o fitid já existe, ignora a linha em vez de dar erro (validação de duplicatas)
 INSERT = """
 INSERT INTO movimentacoes (data_movimentacao, valor, descricao, fitid)
 VALUES (%s, %s, %s, %s)
@@ -28,16 +32,19 @@ ON CONFLICT (fitid) DO NOTHING
 
 
 def ler_ofx(arquivo):
+    """Transforma um arquivo OFX na lista de transações."""
     return OfxParser.parse(arquivo).account.statement.transactions
 
 
-# uma conexao nova com o Neon custa ~1s (TLS + login), entao mantemos um pool e criamos a tabela so uma vez
+# ── Conexão ─────────────────────────────────────────────────────────────────
+# Abrir conexão nova com o Neon custa ~1s (TLS + login). Por isso: um pool reaproveitado
+# e a criação da tabela uma única vez.
 _pool = None
-_pronto = []
+_pronto = []  # vira [True] depois que a tabela foi garantida
 
 
 def _rodar(fn):
-    """Executa fn(cursor) numa transacao; se a conexao do pool estiver quebrada, tenta uma vez de novo."""
+    """Executa fn(cursor) dentro de uma transação. Se a conexão do pool caiu, tenta mais uma vez."""
     global _pool
     if _pool is None:
         _pool = ThreadedConnectionPool(1, 5, os.environ["DATABASE_URL"])
@@ -45,7 +52,7 @@ def _rodar(fn):
         conn = _pool.getconn()
         quebrou = False
         try:
-            if not _pronto:
+            if not _pronto:  # garante a tabela só na primeira vez
                 with conn, conn.cursor() as cur:
                     cur.execute(DDL)
                 _pronto.append(True)
@@ -56,21 +63,23 @@ def _rodar(fn):
             if tentativa == 2:
                 raise
         finally:
-            _pool.putconn(conn, close=quebrou)
+            _pool.putconn(conn, close=quebrou)  # devolve ao pool (descarta se quebrou)
 
 
+# ── Leitura e gravação ──────────────────────────────────────────────────────
 def salvar(transacoes):
-    """Grava as transacoes e devolve quantas eram novas."""
+    """Grava as transações do OFX e devolve quantas eram novas (as repetidas são ignoradas)."""
     def gravar(cur):
         inseridas = 0
         for t in transacoes:
             cur.execute(INSERT, (t.date.date(), t.amount, t.memo, t.id))
-            inseridas += cur.rowcount
+            inseridas += cur.rowcount  # 1 se inseriu, 0 se já existia
         return inseridas
     return _rodar(gravar)
 
 
 def listar():
+    """Todas as movimentações, da mais antiga para a mais nova."""
     def consultar(cur):
         cur.execute(
             "SELECT id, data_movimentacao, valor, descricao, fitid FROM movimentacoes "
@@ -80,17 +89,21 @@ def listar():
     return _rodar(consultar)
 
 
+# ── Exportação ──────────────────────────────────────────────────────────────
 def exportar_ofx(linhas):
-    """Monta um OFX (SGML, como os bancos exportam) a partir de listar(); da pra reimportar."""
-    esc = lambda t: t.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
+    """Monta um arquivo OFX (SGML, como os bancos exportam) a partir de listar().
+    Mantém o fitid de cada linha, então dá para reimportar sem duplicar."""
+    esc = lambda t: t.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")  # texto seguro no OFX
     datas = [l[1] for l in linhas]
     ini, fim = (min(datas), max(datas)) if datas else (date.today(),) * 2
+    # um bloco <STMTTRN> por movimentação
     trans = "".join(
         f"<STMTTRN>\n<TRNTYPE>{'CREDIT' if v > 0 else 'DEBIT'}\n<DTPOSTED>{d:%Y%m%d}000000\n"
         f"<TRNAMT>{v:.2f}\n<FITID>{fitid}\n<MEMO>{esc(desc)}\n</STMTTRN>\n"
         for _, d, v, desc, fitid in linhas
     )
     saldo = sum(l[2] for l in linhas)
+    # cabeçalho + conta + lista de transações + saldo final
     return (
         "OFXHEADER:100\nDATA:OFXSGML\nVERSION:102\nSECURITY:NONE\nENCODING:USASCII\n"
         "CHARSET:1252\nCOMPRESSION:NONE\nOLDFILEUID:NONE\nNEWFILEUID:NONE\n\n"
@@ -104,12 +117,14 @@ def exportar_ofx(linhas):
     )
 
 
+# ── CRUD (criar, editar, excluir) ───────────────────────────────────────────
 def _executar(sql, params):
+    """Roda um comando e devolve quantas linhas ele afetou."""
     return _rodar(lambda cur: (cur.execute(sql, params), cur.rowcount)[1])
 
 
 def criar(data, valor, descricao):
-    # lancamento manual nao vem do OFX, entao ganha um fitid proprio
+    # lançamento manual não vem do OFX, então ganha um fitid próprio (manual-<código aleatório>)
     return _executar(INSERT, (data, valor, descricao, "manual-" + uuid.uuid4().hex))
 
 
@@ -124,6 +139,7 @@ def excluir(id):
     return _executar("DELETE FROM movimentacoes WHERE id=%s", (id,))
 
 
+# Rodando `python db.py` grava o extrato.ofx no banco e diz quantas eram novas
 if __name__ == "__main__":
     with open("extrato.ofx", "rb") as arquivo:
         transacoes = ler_ofx(arquivo)

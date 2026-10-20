@@ -11,23 +11,30 @@ import Ranking from "../componentes/Ranking.jsx";
 import { calcular } from "../Kpis.js";
 import { moeda, dataCurta, percentual, plural } from "../format.js";
 
+// Primeira letra maiúscula, resto minúsculo (para as notas dos KPIs)
 const cap = (t) => t.charAt(0).toUpperCase() + t.slice(1).toLowerCase();
 
-// somente leitura: saldo, grafico, indicadores e a lista
+// MÓDULO ANÁLISE (somente leitura): filtros, saldo com gráfico, 6 KPIs, gráficos de colunas e ranking, e a lista.
+// Tudo é calculado em cima do `recorte` (as movimentações que passaram nos filtros).
 export default function Analise({ extrato }) {
   const { movs, atualizando, destaque, saindo } = extrato;
+  // filtros: `recorte` = movimentações filtradas (em ordem de data); `ordenadas` = as mesmas, na ordem pedida
   const filtros = useFiltros(movs);
   const { cronologicas: recorte, ordenadas, termos, ativos, limpar } = filtros;
+  // todos os indicadores do recorte e o saldo animado do painel
   const k = useMemo(() => calcular(recorte), [recorte]);
   const saldoAnimado = useContagem(k.saldo);
+  // os KPIs só começam a contar quando aparecem na tela
   const [refKpis, kpisVisiveis] = useVisivel();
 
   if (!movs.length) return <Vazio />;
 
   return (
     <div className="analise">
+      {/* BUSCA E FILTROS */}
       <Filtros filtros={filtros} total={movs.length} mostradas={recorte.length} />
 
+      {/* se nada passou nos filtros, mostra "Nada encontrado"; senão, o painel completo */}
       {!recorte.length ? (
         <section className="vazio">
           <h2>Nada encontrado</h2>
@@ -36,6 +43,7 @@ export default function Analise({ extrato }) {
         </section>
       ) : (
       <>
+      {/* PAINEL PRINCIPAL: saldo, gráfico do saldo e, ao lado, entradas, saídas e o medidor de gasto */}
       <section className="hero">
         <div className="hero-saldo">
           <p className="rotulo">{ativos.length ? "Saldo do recorte" : "Saldo calculado"}, de {dataCurta(k.inicio)} a {dataCurta(k.fim)}</p>
@@ -62,6 +70,7 @@ export default function Analise({ extrato }) {
         </aside>
       </section>
 
+      {/* 6 INDICADORES (KPIs) */}
       <section className="kpis" aria-label="Indicadores" ref={refKpis}>
         <div>
           <p className="rotulo">Maior entrada</p>
@@ -95,6 +104,7 @@ export default function Analise({ extrato }) {
         </div>
       </section>
 
+      {/* GRÁFICOS: colunas de entradas/saídas e ranking das maiores */}
       <section className="graficos">
         <article className="cartao">
           <h3>Entradas e saídas</h3>
@@ -106,6 +116,7 @@ export default function Analise({ extrato }) {
         </article>
       </section>
 
+      {/* LISTA completa, com os termos da busca destacados */}
       <Tabela movs={ordenadas} termos={termos.incluir} atualizando={atualizando} destaque={destaque} saindo={saindo} aoLimpar={limpar} />
       </>
       )}
@@ -113,6 +124,7 @@ export default function Analise({ extrato }) {
   );
 }
 
+// Mensagem quando ainda não há nenhuma movimentação no banco (também usada na Administração)
 export function Vazio() {
   return (
     <section className="vazio">

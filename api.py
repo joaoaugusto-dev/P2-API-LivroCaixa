@@ -1,3 +1,4 @@
+"""API HTTP mínima (só biblioteca padrão do Python). É a ponte entre a interface React (web/) e o banco (db.py)."""
 import io
 import json
 from datetime import date
@@ -9,12 +10,15 @@ import db
 import planilha
 
 
+# Texto do cabeçalho da planilha Excel, ex.: "Extrato de 05/10/2026 a 12/10/2026, só saídas"
 def descricao_do_filtro(de, ate, tipo):
     periodo = f"{de:%d/%m/%Y} a {ate:%d/%m/%Y}" if de and ate else f"a partir de {de:%d/%m/%Y}" if de else f"até {ate:%d/%m/%Y}" if ate else "todo o período"
     return f"Extrato de {periodo}" + {"todas": "", "entradas": ", só entradas", "saidas": ", só saídas"}[tipo]
 
 
+# Um "handler" por requisição: cada método do_XXX trata um verbo HTTP (GET, POST, PUT, DELETE)
 class Handler(BaseHTTPRequestHandler):
+    # Resposta padrão em JSON (a interface React sempre recebe JSON, exceto nos downloads)
     def responder(self, dados, status=200):
         corpo = json.dumps(dados, default=str).encode()
         self.send_response(status)
@@ -23,6 +27,7 @@ class Handler(BaseHTTPRequestHandler):
         self.end_headers()
         self.wfile.write(corpo)
 
+    # Validação na entrada: só aceita data ISO, valor numérico e descrição de até 255 caracteres
     def corpo_json(self):
         """Valida o JSON de criar/editar; devolve (data, valor, descricao) ou None."""
         try:
@@ -33,12 +38,14 @@ class Handler(BaseHTTPRequestHandler):
         except Exception:
             self.responder({"erro": "Informe data, valor e descricao validos"}, 400)
 
+    # Pega o número do final de /api/movimentacoes/<id>; se não for número, responde 404
     def id_da_url(self):
         prefixo = "/api/movimentacoes/"
         if self.path.startswith(prefixo) and self.path[len(prefixo):].isdigit():
             return int(self.path[len(prefixo):])
         self.responder({"erro": "nao encontrado"}, 404)
 
+    # GET /api/exportar: filtra por período e tipo e devolve o arquivo (OFX ou Excel) para download
     def exportar(self, q):
         """?de=AAAA-MM-DD&ate=AAAA-MM-DD&tipo=entradas|saidas (todos opcionais)"""
         try:
@@ -71,6 +78,7 @@ class Handler(BaseHTTPRequestHandler):
         self.end_headers()
         self.wfile.write(corpo)
 
+    # PUT = editar uma movimentação existente
     def do_PUT(self):
         id = self.id_da_url()
         campos = id and self.corpo_json()
@@ -78,12 +86,14 @@ class Handler(BaseHTTPRequestHandler):
             ok = db.atualizar(id, *campos)
             self.responder({"ok": True} if ok else {"erro": "Movimentacao nao existe"}, 200 if ok else 404)
 
+    # DELETE = excluir uma movimentação
     def do_DELETE(self):
         id = self.id_da_url()
         if id:
             ok = db.excluir(id)
             self.responder({"ok": True} if ok else {"erro": "Movimentacao nao existe"}, 200 if ok else 404)
 
+    # GET = listar as movimentações ou exportar
     def do_GET(self):
         url = urlsplit(self.path)
         if url.path == "/api/exportar":
@@ -95,6 +105,7 @@ class Handler(BaseHTTPRequestHandler):
             for i, d, v, desc, _ in db.listar()
         ])
 
+    # POST = criar uma movimentação (JSON) ou importar um arquivo .ofx
     def do_POST(self):
         if self.path == "/api/movimentacoes":
             campos = self.corpo_json()
@@ -113,6 +124,7 @@ class Handler(BaseHTTPRequestHandler):
         self.responder({"inseridas": inseridas, "ignoradas": len(transacoes) - inseridas})
 
 
+# `python api.py` sobe o servidor só em localhost:8000 (uma thread por requisição)
 if __name__ == "__main__":
     print("API em http://localhost:8000")
     ThreadingHTTPServer(("localhost", 8000), Handler).serve_forever()

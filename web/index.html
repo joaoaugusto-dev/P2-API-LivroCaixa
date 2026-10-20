@@ -4,17 +4,20 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Extrato OFX</title>
+    <!-- Define o tema (claro/escuro) ANTES de a página aparecer, para não piscar: usa a escolha salva ou o tema do sistema -->
     <script>
       try {
         var t = localStorage.getItem("tema");
         document.documentElement.dataset.tema = t || (matchMedia("(prefers-color-scheme: dark)").matches ? "escuro" : "claro");
       } catch (e) { document.documentElement.dataset.tema = "claro"; }
     </script>
+    <!-- Fontes do projeto: Familjen Grotesk (títulos), Hanken Grotesk (texto) e DM Mono (valores) -->
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Familjen+Grotesk:wght@500;600;700&family=Hanken+Grotesk:wght@400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet" />
   </head>
   <body>
+    <!-- O React desenha a aplicação inteira dentro desta div -->
     <div id="root"></div>
     <script type="module" src="/src/main.jsx"></script>
   </body>

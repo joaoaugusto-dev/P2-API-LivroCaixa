@@ -5,11 +5,12 @@ import { ORDENS } from "../hooks/useFiltros.js";
 import { PERIODOS } from "../periodos.js";
 import { moeda, centavosDe } from "../format.js";
 
+// Ícones SVG da busca (lupa) e do chip removível (×); TIPOS = opções do seletor Todas/Entradas/Saídas
 const lupa = <><circle cx="11" cy="11" r="7" /><path d="m21 21-4.3-4.3" /></>;
 const fechar = <path d="M18 6 6 18M6 6l12 12" />;
 const TIPOS = [["todas", "Todas"], ["entradas", "Entradas"], ["saidas", "Saídas"]];
 
-// valor em centavos; vazio (null) = sem limite
+// Campo de dinheiro com máscara para a faixa de valor. Guarda centavos; vazio (null) = sem limite.
 function CampoMoeda({ rotulo, valor, onChange }) {
   return (
     <label>{rotulo}
@@ -19,13 +20,14 @@ function CampoMoeda({ rotulo, valor, onChange }) {
   );
 }
 
-// busca e filtros de uma lista de movimentacoes; o estado vem de useFiltros
+// Painel de busca e filtros. Só desenha: o estado e a lógica vêm do hook useFiltros.
+// `total` = todas as movimentações; `mostradas` = quantas passaram nos filtros.
 export default function Filtros({ filtros, total, mostradas }) {
   const { f, set, limpar, ativos, avancados, invertido } = filtros;
   const busca = useRef();
   const [aberto, setAberto] = useState(false);
 
-  // "/" leva ao campo de busca, como em muitos sistemas
+  // Atalho de teclado: apertar "/" foca o campo de busca (se a pessoa não estiver digitando em outro campo)
   useEffect(() => {
     const tecla = (e) => {
       if (e.key !== "/" || /^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement.tagName)) return;
@@ -38,11 +40,13 @@ export default function Filtros({ filtros, total, mostradas }) {
 
   return (
     <section className="painel filtros-painel" aria-label="Busca e filtros">
+      {/* LINHA PRINCIPAL: busca, tipo, ordenação e botão que abre os filtros avançados */}
       <div className="linha-busca">
         <label className="busca">
           <span className="sr">Buscar</span>
           <Icone d={lupa} />
           <input ref={busca} type="search" value={f.busca} onChange={(e) => set("busca", e.target.value)} placeholder="Buscar descrição, valor ou data" />
+          {/* dica de uso: só aparece quando o campo está em foco */}
           <span className="ajuda-busca" role="note">
             Várias palavras: todas precisam aparecer. <b>-palavra</b> exclui, <b>"aspas"</b> para uma frase. Aceita valor (450) e data (05/10). Tecla <b>/</b> foca aqui.
           </span>
@@ -59,6 +63,7 @@ export default function Filtros({ filtros, total, mostradas }) {
         </button>
       </div>
 
+      {/* FILTROS AVANÇADOS (abre deslizando): período e faixa de valor */}
       <div id="filtros-avancados" className={"avancado" + (aberto ? " aberto" : "")}>
         <div className="avancado-interno">
           <div className="avancado-corpo">
@@ -87,6 +92,7 @@ export default function Filtros({ filtros, total, mostradas }) {
         </div>
       </div>
 
+      {/* RESUMO: quantos passaram + um chip removível para cada filtro ligado */}
       {(ativos.length > 0 || invertido) && (
         <div className="resumo-filtro" aria-live="polite">
           <span>Mostrando <strong>{mostradas}</strong> de {total}</span>

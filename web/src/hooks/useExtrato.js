@@ -1,10 +1,13 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import * as api from "../api.js";
 
+// Mensagem quando a API Python não responde
 const SEM_API = "Não consegui falar com a API. Rode `python api.py` na raiz do projeto.";
 
-// dados das movimentacoes + operacoes + estados de carregamento, compartilhados pelos modulos
+// HOOK CENTRAL DE DADOS: guarda a lista de movimentações, faz criar/editar/excluir/importar
+// e controla os estados de carregamento. Todos os módulos usam este mesmo objeto.
 export default function useExtrato() {
+  // estados da tela
   const [movs, setMovs] = useState(null); // null = carregando
   const [erro, setErro] = useState("");
   const [aviso, setAviso] = useState("");
@@ -15,6 +18,7 @@ export default function useExtrato() {
   const [saindo, setSaindo] = useState(null);
   const anteriores = useRef(null);
 
+  // Busca a lista no servidor. Compara com a anterior para destacar linhas novas ou editadas.
   const carregar = useCallback((editados = []) => {
     setAtualizando(true);
     return api
@@ -34,16 +38,17 @@ export default function useExtrato() {
       .finally(() => setAtualizando(false));
   }, []);
 
+  // carrega a lista ao abrir a página
   useEffect(() => { carregar(); }, [carregar]);
 
-  // banco serverless pode demorar para acordar: avisa em vez de parecer travado
+  // O banco serverless (Neon) pode demorar para acordar: depois de 3,5 s avisa em vez de parecer travado
   useEffect(() => {
     if (movs !== null || erro) return setDemora(false);
     const t = setTimeout(() => setDemora(true), 3500);
     return () => clearTimeout(t);
   }, [movs, erro]);
 
-  // devolve o texto do erro (para o formulario mostrar) ou undefined se deu certo
+  // CRIAR/EDITAR: devolve o texto do erro (o formulário mostra) ou nada se deu certo
   const salvar = async (corpo, id) => {
     setOcupado("salvando");
     try {
@@ -58,6 +63,7 @@ export default function useExtrato() {
     }
   };
 
+  // EXCLUIR: a linha sai da tela antes de a lista recarregar
   const excluir = async (id) => {
     setOcupado("excluindo");
     try {
@@ -73,6 +79,7 @@ export default function useExtrato() {
     }
   };
 
+  // IMPORTAR .ofx: envia o arquivo e avisa quantas foram gravadas e quantas já existiam
   const importar = async (arquivo) => {
     if (!arquivo) return;
     setAviso("");

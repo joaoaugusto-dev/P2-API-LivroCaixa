@@ -1,22 +1,25 @@
+"""Exportação para Excel (.xlsx) com a identidade visual do Livro-caixa. Usa a biblioteca openpyxl."""
 import io
 
 from openpyxl import Workbook
 from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
 from openpyxl.worksheet.properties import PageSetupProperties
 
-# mesma paleta do Livro-caixa (web/src/styles.css)
+# Paleta do Livro-caixa (a mesma do styles.css), para a planilha ter a identidade do sistema
 PETROLEO, PETROLEO_2, OURO = "0D3A40", "164A52", "F2B632"
 ENTRADA, SAIDA, FUNDO, LINHA, SUAVE = "14805F", "C8472F", "EEF3F0", "D3DCD8", "566A6E"
 MOEDA = '"R$" #,##0.00;-"R$" #,##0.00'
 FONTE = "Calibri"
 
 
+# Atalho: toda fonte da planilha usa Calibri
 def _fonte(**kw):
     return Font(name=FONTE, **kw)
 
 
 def gerar_xlsx(linhas, filtro):
     """linhas: o mesmo formato de db.listar(). filtro: texto que descreve o recorte."""
+    # 1) Cria a pasta de trabalho e configura a aba (cor, sem linhas de grade, larguras)
     wb = Workbook()
     ws = wb.active
     ws.title = "Extrato"
@@ -25,7 +28,7 @@ def gerar_xlsx(linhas, filtro):
     for col, largura in zip("ABCD", (14, 52, 18, 4)):
         ws.column_dimensions[col].width = largura
 
-    # faixa de titulo
+    # 2) Faixa de título verde-petróleo com um filete dourado embaixo
     for r in (1, 2):
         for c in "ABC":
             ws[f"{c}{r}"].fill = PatternFill("solid", fgColor=PETROLEO)
@@ -39,7 +42,7 @@ def gerar_xlsx(linhas, filtro):
         ws[f"{c}3"].fill = PatternFill("solid", fgColor=OURO)
     ws.row_dimensions[3].height = 4
 
-    # indicadores (formulas sobre a tabela, entao acompanham edicoes na planilha)
+    # 3) Indicadores (entradas, saídas, saldo) como fórmulas: recalculam se a pessoa editar a planilha
     topo, fim = 10, 10 + max(len(linhas), 1) - 1
     faixa_valor = f"$C${topo}:$C${fim}"
     kpis = [
@@ -60,7 +63,7 @@ def gerar_xlsx(linhas, filtro):
     ws["A8"] = f"{len(linhas)} movimentações"
     ws["A8"].font = _fonte(size=10, italic=True, color=SUAVE)
 
-    # tabela
+    # 4) Tabela: cabeçalho colorido + uma linha por movimentação
     cab = topo - 1
     for c, titulo in zip("ABC", ("Data", "Descrição", "Valor")):
         cel = ws[f"{c}{cab}"]
@@ -86,6 +89,7 @@ def gerar_xlsx(linhas, filtro):
                 cel.fill = PatternFill("solid", fgColor=FUNDO)
         ws.row_dimensions[r].height = 20
 
+    # 5) Acabamento: filtro, cabeçalho congelado e impressão ajustada à largura da página
     if linhas:
         ws.auto_filter.ref = f"A{cab}:C{fim}"
     ws.freeze_panes = f"A{topo}"
@@ -94,6 +98,7 @@ def gerar_xlsx(linhas, filtro):
     ws.sheet_properties.pageSetUpPr = PageSetupProperties(fitToPage=True)
     ws.print_title_rows = f"{cab}:{cab}"
 
+    # 6) Salva em memória e devolve os bytes (a API manda direto como download)
     saida = io.BytesIO()
     wb.save(saida)
     return saida.getvalue()

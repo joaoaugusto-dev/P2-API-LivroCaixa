@@ -1,4 +1,5 @@
-// Perfis so organizam a tela (quem ve qual modulo). Nao ha login: nao e controle de acesso de verdade.
+// PERFIS E MÓDULOS. Atenção: os perfis só organizam a tela. Não há login, então não é controle de acesso de verdade.
+// Nomes dos módulos (abas) da interface
 export const MODULOS = {
   analise: "Análise",
   insercao: "Inserção",
@@ -6,6 +7,7 @@ export const MODULOS = {
   administracao: "Administração",
 };
 
+// Cada perfil define quais módulos aparecem. O Administrador geral vê todos.
 export const PERFIS = {
   admin: { nome: "Administrador geral", modulos: ["analise", "insercao", "exportacao", "administracao"] },
   analise: { nome: "Análise", modulos: ["analise"] },

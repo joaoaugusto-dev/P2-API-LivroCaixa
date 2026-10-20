@@ -1,4 +1,5 @@
-// mesma estrutura da pagina, para nao haver salto quando os dados chegam
+// Tela de carregamento: blocos cinza com brilho, no mesmo desenho da página real (sem "salto" quando os dados chegam).
+// `completo` = versão da Análise (com painel e gráficos); `demora` mostra o aviso de que o banco está acordando.
 export default function Esqueleto({ demora, completo = true }) {
   return (
     <div className={"esqueleto" + (completo ? " analise" : "")} role="status">

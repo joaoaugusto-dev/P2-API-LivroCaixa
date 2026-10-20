@@ -1,3 +1,4 @@
+// APLICAÇÃO PRINCIPAL: casca da página. Escolhe o perfil, mostra as abas e renderiza o módulo ativo.
 import { useEffect, useState } from "react";
 import useExtrato from "./hooks/useExtrato.js";
 import Esqueleto from "./componentes/Esqueleto.jsx";
@@ -8,23 +9,28 @@ import Insercao from "./modulos/Insercao.jsx";
 import Exportacao from "./modulos/Exportacao.jsx";
 import Administracao from "./modulos/Administracao.jsx";
 
+// Cada módulo (aba) aponta para o componente que desenha a tela dele
 const TELAS = { analise: Analise, insercao: Insercao, exportacao: Exportacao, administracao: Administracao };
 
+// Botão sol/lua: troca o tema claro/escuro, salva a escolha e anima a troca
 function BotaoTema() {
   const [tema, setTema] = useState(document.documentElement.dataset.tema);
   const alternar = (e) => {
+    // 1) decide o próximo tema e grava no <html> (o CSS usa data-tema para trocar as cores)
     const novo = tema === "escuro" ? "claro" : "escuro";
     const aplicar = () => { document.documentElement.dataset.tema = novo; setTema(novo); };
     try { localStorage.setItem("tema", novo); } catch {}
+    // 2) sem animação se a pessoa pediu "reduzir movimento"
     const reduz = matchMedia("(prefers-reduced-motion: reduce)").matches;
     if (reduz) return aplicar();
+    // 3) navegador antigo: só suaviza as cores por 0,4 s
     if (!document.startViewTransition) {
       const html = document.documentElement;
       html.classList.add("tema-troca");
       aplicar();
       return setTimeout(() => html.classList.remove("tema-troca"), 450);
     }
-    // revela o novo tema em circulo a partir do botao clicado
+    // 4) navegador moderno: o tema novo se revela em círculo a partir do botão clicado (View Transitions)
     const r = e.currentTarget.getBoundingClientRect();
     const x = r.left + r.width / 2, y = r.top + r.height / 2;
     const raio = Math.hypot(Math.max(x, innerWidth - x), Math.max(y, innerHeight - y));
@@ -43,11 +49,14 @@ function BotaoTema() {
   );
 }
 
+// Lê o último perfil escolhido (salvo no navegador); se não houver, começa como Administrador
 const lerPerfil = () => {
   try { return localStorage.getItem("perfil") in PERFIS ? localStorage.getItem("perfil") : "admin"; } catch { return "admin"; }
 };
 
+// Componente raiz: topo (logo, perfil, tema), abas, avisos e o módulo ativo
 export default function App() {
+  // todos os dados e operações vêm deste hook e são repassados aos módulos
   const extrato = useExtrato();
   const { movs, erro, setErro, aviso, carregar, demora } = extrato;
   const [perfil, setPerfil] = useState(lerPerfil);
@@ -55,10 +64,12 @@ export default function App() {
   const [trocou, setTrocou] = useState(false); // anima o modulo so quando o usuario troca de aba
   const [inicio, setInicio] = useState(false); // so a primeira chegada dos dados anima em sequencia
 
+  // quais abas o perfil enxerga e qual está aberta
   const modulos = PERFIS[perfil].modulos;
   const ativo = modulos.includes(modulo) ? modulo : modulos[0];
   const Tela = TELAS[ativo];
 
+  // trocar de perfil recarrega as abas permitidas e abre a primeira
   const trocarPerfil = (p) => {
     setPerfil(p);
     setTrocou(true);
@@ -66,6 +77,7 @@ export default function App() {
     try { localStorage.setItem("perfil", p); } catch {}
   };
 
+  // liga a animação de entrada só por 1,6 s depois que os dados chegam pela 1ª vez
   useEffect(() => {
     if (movs === null) return;
     setInicio(true);
@@ -73,10 +85,12 @@ export default function App() {
     return () => clearTimeout(t);
   }, [movs === null]);
 
+  // só a Inserção funciona sem a lista carregada (as outras mostram o esqueleto enquanto carrega)
   const precisaDados = ativo !== "insercao";
 
   return (
     <div className={"pagina" + (inicio ? " inicio" : "")}>
+      {/* TOPO: logo, seletor de perfil e botão de tema */}
       <header className="topo">
         <div className="marca">
           <Logo />
@@ -96,6 +110,7 @@ export default function App() {
         </div>
       </header>
 
+      {/* ABAS: só aparecem se o perfil tem mais de um módulo */}
       {modulos.length > 1 && (
         <nav className="abas filtros" aria-label="Módulos" style={{ "--i": modulos.indexOf(ativo), "--n": modulos.length, "--c": modulos.indexOf(ativo) % 2, "--r": Math.floor(modulos.indexOf(ativo) / 2) }}>
           {modulos.map((m) => (
@@ -104,11 +119,13 @@ export default function App() {
         </nav>
       )}
 
+      {/* AVISOS: confirmações ("Movimentação adicionada") e erros de conexão com botão para tentar de novo */}
       <p className={"aviso" + (aviso ? " ativo" : "")} role="status">{aviso || " "}</p>
       {erro && (
         <p className="erro">{erro} <button className="sec" onClick={() => { setErro(""); carregar(); }}>Tentar de novo</button></p>
       )}
 
+      {/* MÓDULO ATIVO: esqueleto de carregamento ou a tela escolhida */}
       <main className={"modulo" + (trocou ? " troca" : "")} key={ativo}>
         {precisaDados && movs === null ? (
           !erro && <Esqueleto demora={demora} completo={ativo === "analise"} />

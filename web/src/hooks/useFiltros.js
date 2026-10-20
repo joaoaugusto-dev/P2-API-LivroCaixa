@@ -1,9 +1,12 @@
+// BUSCA E FILTROS da Análise e da Administração: busca sem acento, tipo, período, faixa de valor e ordenação.
 import { useMemo, useState } from "react";
 import { faixaDe, PERIODOS } from "../periodos.js";
 import { moeda, dataCompleta, dataCurta } from "../format.js";
 
+// Estado inicial dos filtros (= nenhum filtro ligado)
 const INICIAL = { busca: "", tipo: "todas", periodo: "tudo", de: "", ate: "", min: null, max: null, ordem: "data-asc" };
 
+// Opções do seletor "Ordenar por"
 export const ORDENS = [
   ["data-asc", "Data: mais antigas"],
   ["data-desc", "Data: mais recentes"],
@@ -12,10 +15,10 @@ export const ORDENS = [
   ["desc-asc", "Descrição: A a Z"],
 ];
 
-// sem acento e minusculo, para buscar "energia" em "ENERGIA ELÉTRICA"
+// Tira acentos e deixa minúsculo, para "energia" achar "ENERGIA ELÉTRICA"
 export const sem = (s) => s.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
 
-// "luz -aluguel "folha pagamento"": todas as palavras precisam aparecer; -palavra exclui
+// Interpreta o texto da busca: palavras soltas (todas precisam aparecer), -palavra (exclui) e "frase entre aspas"
 export function termosDe(busca) {
   const incluir = [], excluir = [];
   for (const [, frase, palavra] of busca.matchAll(/"([^"]+)"|(\S+)/g)) {
@@ -26,10 +29,11 @@ export function termosDe(busca) {
   return { incluir, excluir };
 }
 
-// o que a busca enxerga de cada movimentacao: descricao, data e valor (como aparece na tela)
+// O texto em que a busca procura: descrição + data + valor, do jeito que aparecem na tela
 const textoDe = (m) =>
   sem(`${m.descricao} ${dataCompleta(m.data)} ${moeda(m.valor)} ${Math.abs(m.valor).toFixed(2).replace(".", ",")}`.replace(/ /g, " "));
 
+// Ordena a lista conforme a opção escolhida (devolve uma cópia, não altera a original)
 const ordenar = (lista, ordem) => {
   const c = {
     "data-asc": (a, b) => a.data.localeCompare(b.data) || a.id - b.id,
@@ -41,15 +45,19 @@ const ordenar = (lista, ordem) => {
   return lista.slice().sort(c);
 };
 
+// HOOK DE BUSCA E FILTROS: recebe todas as movimentações e devolve o recorte filtrado.
+// Quem usa (Análise e Administração) só desenha o resultado.
 export default function useFiltros(movs) {
   const [f, setF] = useState(INICIAL);
+  // set("tipo", "saidas") atualiza um filtro; limpar() volta tudo ao inicial
   const set = (k, v) => setF((s) => ({ ...s, [k]: v }));
   const limpar = () => setF(INICIAL);
 
+  // só recalcula quando algo muda (useMemo): termos da busca e período em datas
   const termos = useMemo(() => termosDe(f.busca), [f.busca]);
   const faixa = faixaDe(f.periodo, f.de, f.ate);
 
-  // em ordem cronologica (o grafico e os indicadores dependem disso)
+  // APLICA os filtros (tipo, período, faixa de valor e busca). Fica em ordem de data porque o gráfico e os KPIs dependem disso.
   const cronologicas = useMemo(
     () =>
       movs.filter((m) => {
@@ -64,9 +72,10 @@ export default function useFiltros(movs) {
       }),
     [movs, f.tipo, f.min, f.max, termos, faixa.de, faixa.ate]
   );
+  // a tabela mostra a mesma lista, na ordem escolhida pela pessoa
   const ordenadas = useMemo(() => ordenar(cronologicas, f.ordem), [cronologicas, f.ordem]);
 
-  // filtros ligados, cada um com o que fazer para desliga-lo (vira "chip" na tela)
+  // Lista dos filtros ligados; cada um sabe se remover (vira um "chip" com × na tela)
   const ativos = [
     f.busca.trim() && { id: "busca", rotulo: `Busca: ${f.busca.trim()}`, remover: () => set("busca", "") },
     f.tipo !== "todas" && { id: "tipo", rotulo: f.tipo === "entradas" ? "Só entradas" : "Só saídas", remover: () => set("tipo", "todas") },
@@ -84,6 +93,7 @@ export default function useFiltros(movs) {
     },
   ].filter(Boolean);
 
+  // quantos filtros do painel "Filtros" estão ligados (número no botão) e se algum intervalo está invertido
   const avancados = ativos.filter((a) => a.id === "periodo" || a.id === "valor").length;
   const invertido = (faixa.de && faixa.ate && faixa.de > faixa.ate) || (f.min != null && f.max != null && f.min > f.max);
 

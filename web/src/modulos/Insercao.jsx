@@ -3,21 +3,24 @@ import FormMovimentacao from "../componentes/FormMovimentacao.jsx";
 import Tabela from "../componentes/Tabela.jsx";
 import { Girar } from "../componentes/Icones.jsx";
 
-// entrada de dados: lancamento manual ou importacao de um .ofx
+// MÓDULO INSERÇÃO: duas formas de colocar dados no sistema: lançar à mão ou importar um arquivo .ofx.
 export default function Insercao({ extrato }) {
   const { movs, ocupado, salvar, importar, atualizando, destaque, saindo } = extrato;
   const input = useRef();
   const [arrastando, setArrastando] = useState(false);
+  // as 5 últimas movimentações gravadas, para a pessoa ver o resultado na hora
   const recentes = (movs ?? []).slice().sort((a, b) => b.id - a.id).slice(0, 5);
 
   return (
     <>
+      {/* DUAS COLUNAS: formulário manual | importação */}
       <div className="duas-colunas">
         <section className="painel">
           <h2>Lançar movimentação</h2>
           <FormMovimentacao onSalvar={(corpo) => salvar(corpo)} ocupado={ocupado} reiniciar />
         </section>
 
+        {/* área de soltar arquivo: arrastar o .ofx ou clicar para escolher; duplicadas são ignoradas */}
         <section className="painel">
           <h2>Importar extrato</h2>
           <div
@@ -36,6 +39,7 @@ export default function Insercao({ extrato }) {
         </section>
       </div>
 
+      {/* últimas inseridas (aparece quando já há dados) */}
       {recentes.length > 0 && (
         <section className="recentes">
           <h2>Últimas inseridas</h2>

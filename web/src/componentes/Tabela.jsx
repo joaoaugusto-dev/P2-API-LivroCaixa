@@ -2,10 +2,11 @@ import { Icone, lapis, lixeira } from "./Icones.jsx";
 import { sem } from "../hooks/useFiltros.js";
 import { moeda, dataCompleta } from "../format.js";
 
-// marca os termos da busca dentro da descricao (ignora acento e caixa)
+// Destaca (amarelo) os trechos da descrição que casam com a busca, ignorando acento e maiúsculas
 function Marcado({ texto, termos }) {
   const base = sem(texto);
   if (!termos.length || base.length !== texto.length) return texto;
+  // marca letra por letra o que deve ser destacado, depois agrupa em trechos
   const marca = new Array(texto.length).fill(false);
   for (const t of termos) {
     for (let i = base.indexOf(t); t && i !== -1; i = base.indexOf(t, i + 1)) marca.fill(true, i, i + t.length);
@@ -20,7 +21,7 @@ function Marcado({ texto, termos }) {
   return partes;
 }
 
-// lista de movimentacoes; so mostra editar/excluir se receber onEditar/onExcluir
+// Tabela de movimentações. Só mostra os botões Editar/Excluir se receber onEditar/onExcluir (Administração).
 export default function Tabela({ movs, atualizando, destaque, saindo, onEditar, onExcluir, termos = [], aoLimpar }) {
   const acoes = onEditar || onExcluir;
 
@@ -34,6 +35,7 @@ export default function Tabela({ movs, atualizando, destaque, saindo, onEditar, 
           </tr>
         </thead>
         <tbody>
+          {/* uma linha por movimentação; verde = entrada, vermelho = saída */}
           {movs.map((m, i) => (
             <tr key={m.id} style={{ "--i": Math.min(i, 10) }} className={(saindo === m.id ? "saindo " : "") + (destaque.has(m.id) ? "destaque" : "")}>
               <td>{dataCompleta(m.data)}</td>
@@ -47,6 +49,7 @@ export default function Tabela({ movs, atualizando, destaque, saindo, onEditar, 
               )}
             </tr>
           ))}
+          {/* nada passou nos filtros */}
           {!movs.length && (
             <tr>
               <td colSpan={acoes ? 4 : 3} className="nada">
