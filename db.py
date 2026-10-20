@@ -3,6 +3,7 @@ import uuid
 from datetime import date
 
 import psycopg2
+from psycopg2.pool import ThreadedConnectionPool
 from dotenv import load_dotenv
 from ofxparse import OfxParser
 
@@ -30,36 +31,53 @@ def ler_ofx(arquivo):
     return OfxParser.parse(arquivo).account.statement.transactions
 
 
-def conectar():
-    conn = psycopg2.connect(os.environ["DATABASE_URL"])
-    with conn, conn.cursor() as cur:
-        cur.execute(DDL)
-    return conn
+# uma conexao nova com o Neon custa ~1s (TLS + login), entao mantemos um pool e criamos a tabela so uma vez
+_pool = None
+_pronto = []
+
+
+def _rodar(fn):
+    """Executa fn(cursor) numa transacao; se a conexao do pool estiver quebrada, tenta uma vez de novo."""
+    global _pool
+    if _pool is None:
+        _pool = ThreadedConnectionPool(1, 5, os.environ["DATABASE_URL"])
+    for tentativa in (1, 2):
+        conn = _pool.getconn()
+        quebrou = False
+        try:
+            if not _pronto:
+                with conn, conn.cursor() as cur:
+                    cur.execute(DDL)
+                _pronto.append(True)
+            with conn, conn.cursor() as cur:  # o "with conn" faz commit (ou rollback se der erro)
+                return fn(cur)
+        except (psycopg2.OperationalError, psycopg2.InterfaceError):
+            quebrou = True
+            if tentativa == 2:
+                raise
+        finally:
+            _pool.putconn(conn, close=quebrou)
 
 
 def salvar(transacoes):
     """Grava as transacoes e devolve quantas eram novas."""
-    conn = conectar()
-    # o "with conn" faz commit (ou rollback se der erro)
-    with conn, conn.cursor() as cur:
+    def gravar(cur):
         inseridas = 0
         for t in transacoes:
             cur.execute(INSERT, (t.date.date(), t.amount, t.memo, t.id))
             inseridas += cur.rowcount
-    conn.close()
-    return inseridas
+        return inseridas
+    return _rodar(gravar)
 
 
 def listar():
-    conn = conectar()
-    with conn, conn.cursor() as cur:
+    def consultar(cur):
         cur.execute(
             "SELECT id, data_movimentacao, valor, descricao, fitid FROM movimentacoes "
             "ORDER BY data_movimentacao, id"
         )
-        linhas = cur.fetchall()
-    conn.close()
-    return linhas
+        return cur.fetchall()
+    return _rodar(consultar)
 
 
 def exportar_ofx(linhas):
@@ -87,12 +105,7 @@ def exportar_ofx(linhas):
 
 
 def _executar(sql, params):
-    conn = conectar()
-    with conn, conn.cursor() as cur:
-        cur.execute(sql, params)
-        resultado = cur.rowcount
-    conn.close()
-    return resultado
+    return _rodar(lambda cur: (cur.execute(sql, params), cur.rowcount)[1])
 
 
 def criar(data, valor, descricao):
