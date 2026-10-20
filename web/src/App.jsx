@@ -97,7 +97,7 @@ export default function App() {
       </header>
 
       {modulos.length > 1 && (
-        <nav className="abas filtros" aria-label="Módulos" style={{ "--i": modulos.indexOf(ativo), "--n": modulos.length }}>
+        <nav className="abas filtros" aria-label="Módulos" style={{ "--i": modulos.indexOf(ativo), "--n": modulos.length, "--c": modulos.indexOf(ativo) % 2, "--r": Math.floor(modulos.indexOf(ativo) / 2) }}>
           {modulos.map((m) => (
             <button key={m} aria-pressed={m === ativo} onClick={() => { setTrocou(true); setModulo(m); }}>{MODULOS[m]}</button>
           ))}

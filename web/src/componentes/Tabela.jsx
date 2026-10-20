@@ -26,7 +26,7 @@ export default function Tabela({ movs, atualizando, destaque, saindo, onEditar, 
 
   return (
     <section className="lista" aria-busy={atualizando}>
-      <table>
+      <table className={acoes ? "com-acoes" : undefined}>
         <thead>
           <tr>
             <th>Data</th><th>Descrição</th><th className="num">Valor</th>

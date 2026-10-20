@@ -447,3 +447,49 @@ mark { background: var(--ouro-claro); color: inherit; border-radius: 3px; paddin
 html.tema-troca *, html.tema-troca *::before, html.tema-troca *::after { transition: background-color 380ms ease, color 380ms ease, border-color 380ms ease, fill 380ms ease, stroke 380ms ease !important; }
 .ranking ol { grid-template-columns: minmax(0, 1fr); }
 .ranking-texto { min-width: 0; }
+
+/* ---------- celular ---------- */
+.mono-medio, .mono-grande, .valor-grande { white-space: nowrap; }
+html, body { overflow-x: clip; }
+@media (max-width: 559px) {
+  .pagina { padding: 18px 12px 56px; }
+  .topo { gap: 12px; }
+  .topo-direita { width: 100%; justify-content: space-between; }
+  .perfil { flex: 1; }
+  .perfil select { flex: 1; min-width: 0; }
+  /* abas em grade 2x2: quatro itens nao cabem numa linha */
+  .abas { max-width: none; grid-template-columns: 1fr 1fr; grid-auto-flow: row; }
+  .abas::before { bottom: auto; height: calc((100% - 8px) / 2); width: calc((100% - 8px) / 2); transform: translate(calc(var(--c) * 100%), calc(var(--r) * 100%)); }
+  .filtros-painel { padding: 12px; }
+  .linha-busca > .filtros, .linha-busca > .ordem, .linha-busca > .btn-filtros { flex: 1 1 auto; }
+  .linha-busca .ordem select { width: 100%; }
+  .hero { padding: 22px 18px; gap: 24px; border-radius: 18px; }
+  .mono-grande { font-size: 1.35rem; }
+  .mono-medio { font-size: 1.1rem; }
+  .kpis > div { padding: 14px 14px; }
+  .cartao { padding: 16px 14px; }
+  .lista { padding: 8px 12px 12px; }
+  th, td { font-size: .9rem; }
+  td:first-child { padding-right: 8px; }
+  td.botoes { padding-left: 4px; }
+  td.botoes button { width: 32px; height: 32px; }
+  .painel { padding: 18px 16px; }
+  .datas { grid-template-columns: 1fr; }
+  .cabecalho-modulo { align-items: stretch; }
+  .cabecalho-modulo button { width: 100%; justify-content: center; }
+  .exportar-grade .filtros { max-width: none; }
+}
+
+/* celular: na Administracao cada linha vira um bloco (descricao e botoes em cima, data e valor embaixo) */
+@media (max-width: 559px) {
+  .com-acoes thead { display: none; }
+  .com-acoes, .com-acoes tbody { display: block; }
+  .com-acoes tr { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 2px 12px; align-items: center; padding: 12px 0; border-bottom: 1px solid var(--linha); }
+  .com-acoes tbody tr:last-child { border-bottom: 0; }
+  .com-acoes td { border: 0; padding: 0; }
+  .com-acoes td:nth-child(2) { grid-area: 1 / 1; font-weight: 500; overflow-wrap: anywhere; }
+  .com-acoes td.botoes { grid-area: 1 / 2; padding: 0; }
+  .com-acoes td:nth-child(1) { grid-area: 2 / 1; font-size: .85rem; padding: 0; }
+  .com-acoes td:nth-child(3) { grid-area: 2 / 2; }
+  .com-acoes td.nada { grid-area: auto; grid-column: 1 / -1; }
+}
