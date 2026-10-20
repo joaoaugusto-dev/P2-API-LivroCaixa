@@ -29,6 +29,8 @@ A interface tem quatro módulos, escolhidos pelo seletor de perfil no topo:
 | Exportação | baixar em `.ofx`, `.csv` ou Excel formatado (`.xlsx`), com período (atalhos ou datas personalizadas) e tipo (todas, só entradas, só saídas) | Administrador geral, Exportação |
 | Administração | criar, editar e excluir | Administrador geral |
 
+O botão de sol/lua no topo alterna entre tema claro e escuro (o padrão segue o sistema e a escolha fica salva).
+
 Os perfis só organizam a tela: não há login nem controle de acesso de verdade.
 
 Mostra o saldo, o gráfico do saldo acumulado, entradas, saídas e as movimentações salvas no Neon. O botão "Importar arquivo .ofx" (ou arrastar o arquivo) grava no banco sem duplicar. Também dá para criar, editar e excluir movimentações (CRUD completo) e exportar o que está no banco de volta para um `.ofx`.

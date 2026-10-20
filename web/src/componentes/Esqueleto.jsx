@@ -1,7 +1,7 @@
 // mesma estrutura da pagina, para nao haver salto quando os dados chegam
 export default function Esqueleto({ demora, completo = true }) {
   return (
-    <div className="esqueleto" role="status">
+    <div className={"esqueleto" + (completo ? " analise" : "")} role="status">
       <span className="sr">Carregando movimentações…</span>
       {completo && (
         <>
@@ -16,7 +16,11 @@ export default function Esqueleto({ demora, completo = true }) {
             </aside>
           </section>
           <section className="kpis">
-            {[0, 1, 2, 3].map((i) => <div key={i}><span className="bloco b-rotulo" /><span className="bloco b-valor" /><span className="bloco b-nota" /></div>)}
+            {[0, 1, 2, 3, 4, 5].map((i) => <div key={i}><span className="bloco b-rotulo" /><span className="bloco b-valor" /><span className="bloco b-nota" /></div>)}
+          </section>
+          <section className="graficos">
+            <article className="cartao"><span className="bloco b-rotulo" /><span className="bloco b-grafico" style={{ marginTop: 16 }} /></article>
+            <article className="cartao"><span className="bloco b-rotulo" />{[0, 1, 2, 3].map((i) => <span key={i} className="bloco b-linha" style={{ height: 30 }} />)}</article>
           </section>
         </>
       )}
