@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import * as api from "../api.js";
+import { plural } from "../format.js";
 
 // Mensagem quando a API Python não responde
 const SEM_API = "Não consegui falar com a API. Rode `python api.py` na raiz do projeto.";
@@ -9,6 +10,7 @@ const SEM_API = "Não consegui falar com a API. Rode `python api.py` na raiz do 
 export default function useExtrato() {
   // estados da tela
   const [movs, setMovs] = useState(null); // null = carregando
+  const [categorias, setCategorias] = useState([]); // [{id, nome, cor, qtd, total}]
   const [erro, setErro] = useState("");
   const [aviso, setAviso] = useState("");
   const [ocupado, setOcupado] = useState(null); // "importando" | "salvando" | "excluindo"
@@ -21,9 +23,10 @@ export default function useExtrato() {
   // Busca a lista no servidor. Compara com a anterior para destacar linhas novas ou editadas.
   const carregar = useCallback((editados = []) => {
     setAtualizando(true);
-    return api
-      .listar()
-      .then((d) => {
+    // busca movimentações e categorias juntas (a tela sempre precisa das duas)
+    return Promise.all([api.listar(), api.categorias()])
+      .then(([d, cats]) => {
+        setCategorias(cats);
         const novos = anteriores.current ? d.filter((m) => !anteriores.current.has(m.id)).map((m) => m.id) : [];
         anteriores.current = new Set(d.map((m) => m.id));
         setSaindo(null);
@@ -79,6 +82,87 @@ export default function useExtrato() {
     }
   };
 
+  // CATEGORIA: a pessoa escolhe ou confirma. A tela muda na hora (otimista) e o servidor aprende com a escolha.
+  const definirCategoria = async (id, categoriaId) => {
+    setMovs((l) => l.map((m) => (m.id === id ? { ...m, categoria_id: categoriaId, auto: false, confianca: null } : m)));
+    try {
+      const r = await api.definirCategoria(id, categoriaId);
+      const d = await r.json();
+      if (!r.ok) throw new Error();
+      setAviso(d.atualizadas ? `Categoria definida. Aprendi com isso e atualizei ${plural(d.atualizadas, "sugestão", "sugestões")}.` : "Categoria definida.");
+    } catch {
+      setAviso("Não consegui salvar a categoria. Tente de novo.");
+    }
+    carregar();
+  };
+
+  // Confirma várias sugestões de uma vez (cada uma vira exemplo de treino)
+  const confirmarTodas = async (lista) => {
+    for (const m of lista) await api.definirCategoria(m.id, m.categoria_id);
+    setAviso(`${plural(lista.length, "sugestão confirmada", "sugestões confirmadas")}. O sistema aprendeu com todas.`);
+    carregar();
+  };
+
+  // Cria uma categoria (devolve o texto do erro, ou {id} se deu certo)
+  const criarCategoria = async (nome, cor) => {
+    try {
+      const r = await api.criarCategoria({ nome, cor });
+      const d = await r.json();
+      if (!r.ok) return { erro: d.erro };
+      await carregar();
+      return { id: d.id };
+    } catch {
+      return { erro: "Não consegui falar com a API. Tente de novo." };
+    }
+  };
+
+  // Cria uma categoria com a próxima cor livre e já atribui à movimentação (fluxo "criar na hora" do menu)
+  const criarEAtribuir = async (movId, nome) => {
+    const usadas = new Set(categorias.map((c) => c.cor));
+    const cor = [1, 2, 3, 4, 5, 6, 7, 8].find((n) => !usadas.has(n)) ?? (categorias.length % 8) + 1;
+    const r = await criarCategoria(nome, cor);
+    if (!r.erro) await definirCategoria(movId, r.id);
+    return r;
+  };
+
+  // Renomeia / troca a cor de uma categoria (devolve o texto do erro, se houver)
+  const editarCategoria = async (id, nome, cor) => {
+    try {
+      const r = await api.editarCategoria(id, { nome, cor });
+      if (!r.ok) return (await r.json()).erro;
+      setAviso("Categoria atualizada.");
+      carregar();
+    } catch {
+      return "Não consegui falar com a API. Tente de novo.";
+    }
+  };
+
+  // Apaga a categoria; as movimentações dela voltam a ser classificadas
+  const excluirCategoria = async (id) => {
+    try {
+      await api.excluirCategoria(id);
+      setAviso("Categoria excluída. As movimentações dela foram reclassificadas.");
+      carregar();
+      return true;
+    } catch {
+      setAviso("Não consegui excluir a categoria. Tente de novo.");
+    }
+  };
+
+  // Botão "Reaprender": refaz o treino com tudo que já foi confirmado
+  const reaprender = async () => {
+    setOcupado("aprendendo");
+    try {
+      const d = await (await api.reclassificar()).json();
+      setAviso(d.mudaram ? `Reaprendi e atualizei ${plural(d.mudaram, "classificação", "classificações")}.` : "Reaprendi: nenhuma classificação precisou mudar.");
+      await carregar();
+    } catch {
+      setAviso("Não consegui reaprender agora. Tente de novo.");
+    } finally {
+      setOcupado(null);
+    }
+  };
+
   // IMPORTAR .ofx: envia o arquivo e avisa quantas foram gravadas e quantas já existiam
   const importar = async (arquivo) => {
     if (!arquivo) return;
@@ -102,5 +186,5 @@ export default function useExtrato() {
     carregar();
   };
 
-  return { movs, erro, setErro, aviso, ocupado, atualizando, demora, destaque, saindo, carregar, salvar, excluir, importar };
+  return { movs, categorias, criarEAtribuir, definirCategoria, confirmarTodas, criarCategoria, editarCategoria, excluirCategoria, reaprender, erro, setErro, aviso, ocupado, atualizando, demora, destaque, saindo, carregar, salvar, excluir, importar };
 }

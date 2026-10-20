@@ -11,8 +11,8 @@ import { moeda, dataCompleta } from "../format.js";
 // Lista com filtros + botões de editar/excluir; criar e editar usam o mesmo formulário num pop-up,
 // e excluir pede confirmação.
 export default function Administracao({ extrato }) {
-  const { movs, ocupado, salvar, excluir, atualizando, destaque, saindo } = extrato;
-  const filtros = useFiltros(movs);
+  const { movs, ocupado, salvar, excluir, atualizando, destaque, saindo, categorias, definirCategoria, criarEAtribuir } = extrato;
+  const filtros = useFiltros(movs, categorias);
   // referências aos dois pop-ups nativos (<dialog>): formulário e confirmação de exclusão
   const dialogoForm = useRef();
   const dialogoExcluir = useRef();
@@ -46,8 +46,8 @@ export default function Administracao({ extrato }) {
       {/* filtros + tabela com ações; se o banco está vazio, mostra a mensagem de vazio */}
       {movs.length ? (
         <>
-          <Filtros filtros={filtros} total={movs.length} mostradas={filtros.ordenadas.length} />
-          <Tabela movs={filtros.ordenadas} termos={filtros.termos.incluir} aoLimpar={filtros.limpar} atualizando={atualizando} destaque={destaque} saindo={saindo} onEditar={abrirForm} onExcluir={pedirExclusao} />
+          <Filtros filtros={filtros} total={movs.length} mostradas={filtros.ordenadas.length} categorias={categorias} />
+          <Tabela movs={filtros.ordenadas} termos={filtros.termos.incluir} aoLimpar={filtros.limpar} atualizando={atualizando} destaque={destaque} saindo={saindo} onEditar={abrirForm} onExcluir={pedirExclusao} categorias={categorias} onCategoria={definirCategoria} onCriarCategoria={criarEAtribuir} />
         </>
       ) : (
         <Vazio />
@@ -63,6 +63,7 @@ export default function Administracao({ extrato }) {
           onCancelar={() => dialogoForm.current.close()}
           ocupado={ocupado}
           rotulo={edicao.m ? "Salvar alterações" : "Adicionar"}
+          categorias={categorias}
         />
       </dialog>
 

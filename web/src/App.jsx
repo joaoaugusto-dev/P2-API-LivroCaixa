@@ -8,9 +8,10 @@ import Analise from "./modulos/Analise.jsx";
 import Insercao from "./modulos/Insercao.jsx";
 import Exportacao from "./modulos/Exportacao.jsx";
 import Administracao from "./modulos/Administracao.jsx";
+import Categorias from "./modulos/Categorias.jsx";
 
 // Cada módulo (aba) aponta para o componente que desenha a tela dele
-const TELAS = { analise: Analise, insercao: Insercao, exportacao: Exportacao, administracao: Administracao };
+const TELAS = { analise: Analise, insercao: Insercao, exportacao: Exportacao, administracao: Administracao, categorias: Categorias };
 
 // Botão sol/lua: troca o tema claro/escuro, salva a escolha e anima a troca
 function BotaoTema() {
@@ -112,7 +113,7 @@ export default function App() {
 
       {/* ABAS: só aparecem se o perfil tem mais de um módulo */}
       {modulos.length > 1 && (
-        <nav className="abas filtros" aria-label="Módulos" style={{ "--i": modulos.indexOf(ativo), "--n": modulos.length, "--c": modulos.indexOf(ativo) % 2, "--r": Math.floor(modulos.indexOf(ativo) / 2) }}>
+        <nav className="abas filtros" aria-label="Módulos" style={{ "--i": modulos.indexOf(ativo), "--n": modulos.length, "--c": modulos.indexOf(ativo) % 2, "--r": Math.floor(modulos.indexOf(ativo) / 2), "--linhas": Math.ceil(modulos.length / 2) }}>
           {modulos.map((m) => (
             <button key={m} aria-pressed={m === ativo} onClick={() => { setTrocou(true); setModulo(m); }}>{MODULOS[m]}</button>
           ))}

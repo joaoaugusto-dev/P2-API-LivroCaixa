@@ -8,6 +8,7 @@ import useVisivel from "../hooks/useVisivel.js";
 import Valor from "../componentes/Valor.jsx";
 import GraficoFluxo from "../componentes/GraficoFluxo.jsx";
 import Ranking from "../componentes/Ranking.jsx";
+import GastosPorCategoria from "../componentes/GastosPorCategoria.jsx";
 import { calcular } from "../Kpis.js";
 import { moeda, dataCurta, percentual, plural } from "../format.js";
 
@@ -17,9 +18,9 @@ const cap = (t) => t.charAt(0).toUpperCase() + t.slice(1).toLowerCase();
 // MÓDULO ANÁLISE (somente leitura): filtros, saldo com gráfico, 6 KPIs, gráficos de colunas e ranking, e a lista.
 // Tudo é calculado em cima do `recorte` (as movimentações que passaram nos filtros).
 export default function Analise({ extrato }) {
-  const { movs, atualizando, destaque, saindo } = extrato;
+  const { movs, atualizando, destaque, saindo, categorias } = extrato;
   // filtros: `recorte` = movimentações filtradas (em ordem de data); `ordenadas` = as mesmas, na ordem pedida
-  const filtros = useFiltros(movs);
+  const filtros = useFiltros(movs, categorias);
   const { cronologicas: recorte, ordenadas, termos, ativos, limpar } = filtros;
   // todos os indicadores do recorte e o saldo animado do painel
   const k = useMemo(() => calcular(recorte), [recorte]);
@@ -32,7 +33,7 @@ export default function Analise({ extrato }) {
   return (
     <div className="analise">
       {/* BUSCA E FILTROS */}
-      <Filtros filtros={filtros} total={movs.length} mostradas={recorte.length} />
+      <Filtros filtros={filtros} total={movs.length} mostradas={recorte.length} categorias={categorias} />
 
       {/* se nada passou nos filtros, mostra "Nada encontrado"; senão, o painel completo */}
       {!recorte.length ? (
@@ -114,10 +115,15 @@ export default function Analise({ extrato }) {
           <h3>Maiores movimentações</h3>
           <Ranking movs={recorte} />
         </article>
+        {/* divisão por categoria (usa as categorias definidas ou sugeridas) */}
+        <article className="cartao larga">
+          <h3>Para onde foi o dinheiro</h3>
+          <GastosPorCategoria movs={recorte} categorias={categorias} />
+        </article>
       </section>
 
       {/* LISTA completa, com os termos da busca destacados */}
-      <Tabela movs={ordenadas} termos={termos.incluir} atualizando={atualizando} destaque={destaque} saindo={saindo} aoLimpar={limpar} />
+      <Tabela movs={ordenadas} termos={termos.incluir} atualizando={atualizando} destaque={destaque} saindo={saindo} aoLimpar={limpar} categorias={categorias} />
       </>
       )}
     </div>

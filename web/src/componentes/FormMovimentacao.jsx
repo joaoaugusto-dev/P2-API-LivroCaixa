@@ -7,9 +7,9 @@ const hoje = () => new Date().toISOString().slice(0, 10);
 
 // Formulário usado para criar (Inserção/Administração) e editar (Administração).
 // `inicial` = movimentação a editar; `onSalvar` devolve o texto do erro, ou nada se deu certo.
-export default function FormMovimentacao({ inicial, onSalvar, onCancelar, ocupado, rotulo = "Adicionar", reiniciar }) {
+export default function FormMovimentacao({ inicial, onSalvar, onCancelar, ocupado, rotulo = "Adicionar", reiniciar, categorias = [] }) {
   // estado do formulário: o valor é guardado em centavos (inteiro) para a máscara de dinheiro
-  const vazio = { data: hoje(), tipo: "saida", centavos: 0, descricao: "" };
+  const vazio = { data: hoje(), tipo: "saida", centavos: 0, descricao: "", categoria: "auto" };
   const [f, setF] = useState(
     inicial
       ? { data: inicial.data, tipo: inicial.valor < 0 ? "saida" : "entrada", centavos: Math.round(Math.abs(inicial.valor) * 100), descricao: inicial.descricao }
@@ -22,7 +22,8 @@ export default function FormMovimentacao({ inicial, onSalvar, onCancelar, ocupad
     e.preventDefault();
     if (!f.centavos) return setErro("Informe um valor maior que zero.");
     const valor = (f.tipo === "saida" ? -f.centavos : f.centavos) / 100;
-    const msg = await onSalvar({ data: f.data, valor, descricao: f.descricao });
+    // categoria "auto" = deixa o sistema sugerir; qualquer outra vale como escolha da pessoa
+    const msg = await onSalvar({ data: f.data, valor, descricao: f.descricao, ...(f.categoria !== "auto" && { categoria_id: Number(f.categoria) }) });
     if (msg) return setErro(msg);
     setErro("");
     if (reiniciar) setF(vazio);
@@ -43,6 +44,15 @@ export default function FormMovimentacao({ inicial, onSalvar, onCancelar, ocupad
       <label>Data<input type="date" required value={f.data} onChange={(e) => setF({ ...f, data: e.target.value })} /></label>
       <label>Descrição<input type="text" required maxLength="255" value={f.descricao} onChange={(e) => setF({ ...f, descricao: e.target.value })} /></label>
       {/* erro de validação ou de conexão */}
+      {/* categoria: só ao criar (para editar, use o chip da tabela). "Automática" = o sistema sugere. */}
+      {!inicial && categorias.length > 0 && (
+        <label>Categoria
+          <select value={f.categoria} onChange={(e) => setF({ ...f, categoria: e.target.value })}>
+            <option value="auto">Automática (o sistema sugere)</option>
+            {categorias.map((c) => <option key={c.id} value={c.id}>{c.nome}</option>)}
+          </select>
+        </label>
+      )}
       {erro && <p className="erro">{erro}</p>}
       <div className="botoes-form">
         {onCancelar && <button type="button" className="sec" onClick={onCancelar}>Cancelar</button>}

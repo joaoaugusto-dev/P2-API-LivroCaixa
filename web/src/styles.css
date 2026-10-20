@@ -41,6 +41,9 @@
   --primario-2: #164a52;
   --sobre-primario: #ffffff;
   --sobre-cor: #ffffff;
+  /* cores das categorias (1 a 8): paleta categórica validada, uma versão para cada tema */
+  --cat-1: #2a78d6; --cat-2: #eb6834; --cat-3: #1baf7a; --cat-4: #eda100;
+  --cat-5: #e87ba4; --cat-6: #008300; --cat-7: #6250d6; --cat-8: #e34948;
   color-scheme: light;
   --titulo: "Familjen Grotesk", system-ui, sans-serif;
   --mono: "DM Mono", ui-monospace, monospace;
@@ -74,6 +77,8 @@
   --primario-2: #ffc94d;
   --sobre-primario: #10262b;
   --sobre-cor: #0b1b1f;
+  --cat-1: #3987e5; --cat-2: #d95926; --cat-3: #199e70; --cat-4: #c98500;
+  --cat-5: #d55181; --cat-6: #008300; --cat-7: #9085e9; --cat-8: #e66767;
   color-scheme: dark;
 }
 /* 3) BASE: tipografia, largura máxima da página e foco visível para teclado */
@@ -297,7 +302,7 @@ button:disabled { opacity: .7; cursor: progress; }
 /* 8) ---------- MÓDULOS: perfil, abas, painéis, importação, exportação ---------- */
 .perfil { display: flex; align-items: center; gap: 8px; color: var(--suave); font-weight: 500; font-size: .9rem; }
 .perfil select { font: inherit; color: var(--tinta); border: 1px solid var(--borda-forte); border-radius: var(--raio); padding: 8px 12px; background: var(--papel); cursor: pointer; }
-.abas { margin-top: 20px; max-width: 560px; }
+.abas { margin-top: 20px; max-width: 720px; }
 .abas button { white-space: nowrap; }
 @keyframes entrar-modulo { from { opacity: 0; transform: translateY(6px); } }
 .modulo.troca { animation: entrar-modulo 240ms var(--ease-out); }
@@ -384,7 +389,7 @@ button.botao:disabled { opacity: .5; cursor: not-allowed; }
 .avancado-corpo .datas label { font-weight: 500; margin: 0; }
 .avancado-corpo .datas input { display: block; width: 100%; margin-top: 4px; padding: 9px 12px; border: 1px solid var(--linha); border-radius: var(--raio); background: var(--campo); }
 .avancado-corpo > div > .datas:first-of-type { margin-top: 0; }
-@media (min-width: 820px) { .avancado-corpo { grid-template-columns: 1fr 1fr; gap: 32px; } }
+@media (min-width: 820px) { .avancado-corpo { grid-template-columns: 1fr 1fr 1fr; gap: 32px; } }
 
 .resumo-filtro { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--linha); color: var(--suave); }
 .resumo-filtro strong { color: var(--tinta); }
@@ -477,7 +482,7 @@ html, body { overflow-x: clip; }
   .perfil select { flex: 1; min-width: 0; }
   /* abas em grade 2x2: quatro itens nao cabem numa linha */
   .abas { max-width: none; grid-template-columns: 1fr 1fr; grid-auto-flow: row; }
-  .abas::before { bottom: auto; height: calc((100% - 8px) / 2); width: calc((100% - 8px) / 2); transform: translate(calc(var(--c) * 100%), calc(var(--r) * 100%)); }
+  .abas::before { bottom: auto; height: calc((100% - 8px) / var(--linhas, 2)); width: calc((100% - 8px) / 2); transform: translate(calc(var(--c) * 100%), calc(var(--r) * 100%)); }
   .filtros-painel { padding: 12px; }
   .linha-busca > .filtros, .linha-busca > .ordem, .linha-busca > .btn-filtros { flex: 1 1 auto; }
   .linha-busca .ordem select { width: 100%; }
@@ -498,16 +503,102 @@ html, body { overflow-x: clip; }
   .exportar-grade .filtros { max-width: none; }
 }
 
-/* Celular, Administração: cada linha vira um bloco (descrição e botões em cima, data e valor embaixo) */
+/* Celular: cada linha da tabela vira um bloco (descrição + categoria em cima, data e valor embaixo; botões à direita se houver) */
 @media (max-width: 559px) {
-  .com-acoes thead { display: none; }
-  .com-acoes, .com-acoes tbody { display: block; }
-  .com-acoes tr { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 2px 12px; align-items: center; padding: 12px 0; border-bottom: 1px solid var(--linha); }
-  .com-acoes tbody tr:last-child { border-bottom: 0; }
-  .com-acoes td { border: 0; padding: 0; }
-  .com-acoes td:nth-child(2) { grid-area: 1 / 1; font-weight: 500; overflow-wrap: anywhere; }
-  .com-acoes td.botoes { grid-area: 1 / 2; padding: 0; }
-  .com-acoes td:nth-child(1) { grid-area: 2 / 1; font-size: .85rem; padding: 0; }
-  .com-acoes td:nth-child(3) { grid-area: 2 / 2; }
-  .com-acoes td.nada { grid-area: auto; grid-column: 1 / -1; }
+  .lista table thead { display: none; }
+  .lista table, .lista tbody { display: block; }
+  .lista tbody tr { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 4px 12px; align-items: center; padding: 12px 0; border-bottom: 1px solid var(--linha); }
+  .lista tbody tr:last-child { border-bottom: 0; }
+  .lista td { border: 0; padding: 0; }
+  .lista td:nth-child(2) { grid-area: 1 / 1; font-weight: 500; overflow-wrap: anywhere; }
+  .lista table:not(.com-acoes) td:nth-child(2) { grid-column: 1 / -1; }
+  .lista td.botoes { grid-area: 1 / 2; padding: 0; }
+  .lista td:nth-child(1) { grid-area: 2 / 1; font-size: .85rem; padding: 0; }
+  .lista td:nth-child(3) { grid-area: 2 / 2; }
+  .lista td.nada { grid-area: auto; grid-column: 1 / -1; }
 }
+
+/* ---------- CATEGORIAS ---------- */
+/* Bolinha de cor da categoria (a cor vem de --cat-1..8, que muda sozinha no tema escuro) */
+.cat-ponto { display: inline-block; width: 10px; height: 10px; border-radius: 50%; background: var(--cat); flex: none; }
+/* Descrição + chip de categoria lado a lado (quebra para baixo quando falta espaço) */
+.desc { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 12px; }
+.chip-wrap { position: relative; display: inline-flex; align-items: center; gap: 4px; }
+.chip-cat { display: inline-flex; align-items: center; gap: 7px; border: 1px solid transparent; background: var(--realce); color: var(--tinta); border-radius: 999px; padding: 2px 10px; font: inherit; font-size: .82rem; font-weight: 500; white-space: nowrap; }
+button.chip-cat { cursor: pointer; transition: border-color 150ms var(--ease-out), background-color 150ms var(--ease-out), transform 120ms var(--ease-out); }
+button.chip-cat:active { transform: scale(.96); }
+@media (hover: hover) and (pointer: fine) { button.chip-cat:hover { border-color: var(--borda-forte); } }
+.chip-cat.vazia { background: transparent; border: 1px dashed var(--borda-forte); color: var(--suave); }
+.auto-marca { background: var(--ouro); color: #10262b; border-radius: 999px; padding: 0 6px; font-size: .68rem; font-weight: 600; line-height: 1.5; }
+/* ✓ que confirma a sugestão com um clique */
+.confirmar-cat { width: 26px; height: 26px; border-radius: 50%; border: 0; background: var(--entrada); color: var(--sobre-cor); display: grid; place-items: center; cursor: pointer; padding: 0; transition: transform 120ms var(--ease-out); }
+.confirmar-cat:active { transform: scale(.88); }
+.confirmar-cat svg { width: 14px; height: 14px; }
+/* Menu para trocar, remover ou criar categoria */
+.menu-cat { position: absolute; z-index: 30; top: calc(100% + 6px); left: 0; width: min(270px, 78vw); background: var(--papel); color: var(--tinta); border: 1px solid var(--linha); border-radius: 12px; box-shadow: 0 14px 34px rgb(0 0 0 / .2); padding: 8px; animation: entrar 160ms var(--ease-out); transform-origin: top left; }
+.menu-cat input { width: 100%; margin: 0 0 6px; padding: 8px 10px; border: 1px solid var(--linha); border-radius: 8px; background: var(--campo); }
+.menu-cat ul { list-style: none; margin: 0; padding: 0; max-height: 240px; overflow-y: auto; }
+.menu-cat li button { display: flex; align-items: center; gap: 8px; width: 100%; border: 0; background: none; color: inherit; font: inherit; text-align: left; padding: 8px 10px; border-radius: 8px; cursor: pointer; }
+.menu-cat li button svg { margin-left: auto; width: 16px; height: 16px; }
+@media (hover: hover) and (pointer: fine) { .menu-cat li button:hover { background: var(--hover-linha); } }
+.menu-cat .criar-cat { font-weight: 600; color: var(--tinta); }
+.menu-cat .remover-cat { color: var(--suave); }
+.erro-menu { color: var(--erro-tx); font-size: .85rem; margin: 6px 2px 0; }
+/* Seletor das 8 cores */
+.cores { display: flex; flex-wrap: wrap; gap: 8px; }
+.cor { width: 26px; height: 26px; border-radius: 50%; border: 2px solid transparent; background: var(--cat); box-shadow: inset 0 0 0 2px var(--papel); cursor: pointer; padding: 0; transition: transform 120ms var(--ease-out), border-color 150ms var(--ease-out); }
+.cor[aria-checked="true"] { border-color: var(--tinta); }
+.cor:active { transform: scale(.88); }
+.sel-cat { font: inherit; padding: 9px 12px; border: 1px solid var(--linha); border-radius: var(--raio); background: var(--campo); color: var(--tinta); width: 100%; max-width: 260px; }
+.painel form label select, dialog label select { display: block; width: 100%; margin-top: 4px; padding: 9px 12px; border: 1px solid var(--linha); border-radius: var(--raio); background: var(--campo); color: var(--tinta); font: inherit; }
+/* Gráfico "Para onde foi o dinheiro" */
+.cartao.larga { grid-column: 1 / -1; }
+.por-categoria { display: grid; gap: 4px; }
+.pilha { display: flex; gap: 2px; height: 16px; margin: 14px 0 8px; clip-path: inset(0 0 0 0 round 8px); }
+.pilha span { background: var(--cat); min-width: 4px; border-radius: 3px; }
+@keyframes revelar { from { clip-path: inset(0 100% 0 0 round 8px); } }
+.pilha.cresce { animation: revelar 800ms var(--ease-out) backwards; }
+.lista-cat { list-style: none; margin: 0; padding: 0; }
+.lista-cat li { display: grid; grid-template-columns: 12px minmax(0, 1fr) auto auto; gap: 10px; align-items: center; padding: 9px 0; border-bottom: 1px solid var(--linha); }
+.lista-cat li:last-child { border-bottom: 0; }
+.lc-nome { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 500; }
+.lc-pct { color: var(--suave); font: 500 .85rem var(--mono); min-width: 52px; text-align: right; }
+.lc-valor { font: 500 .9rem var(--mono); min-width: 110px; text-align: right; white-space: nowrap; }
+/* Módulo Categorias: revisão, lista e explicação */
+.resumo-aprendizado { color: var(--suave); margin: 0 0 8px; }
+.resumo-aprendizado strong { color: var(--tinta); }
+.revisao { list-style: none; margin: 8px 0 0; padding: 0; }
+.revisao li { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; gap: 6px 16px; align-items: center; padding: 12px 0; border-bottom: 1px solid var(--linha); }
+.revisao li:last-child { border-bottom: 0; }
+.rev-texto { display: grid; min-width: 0; }
+.rev-texto strong { font-weight: 500; overflow-wrap: anywhere; }
+.rev-texto span { color: var(--suave); font-size: .85rem; }
+.rev-valor { font: 500 .92rem var(--mono); white-space: nowrap; }
+.cat-lista { list-style: none; margin: 0; padding: 0; }
+.cat-linha { display: flex; align-items: center; gap: 10px; padding: 10px 0; border-bottom: 1px solid var(--linha); }
+.cat-nome { font-weight: 500; flex: 1; min-width: 0; overflow-wrap: anywhere; }
+.cat-uso { color: var(--suave); font-size: .88rem; }
+.cat-acoes { display: inline-flex; gap: 6px; }
+.cat-acoes button { border: 0; cursor: pointer; width: 34px; height: 34px; border-radius: 8px; display: inline-grid; place-items: center; transition: background-color 150ms var(--ease-out), transform 120ms var(--ease-out); }
+.cat-acoes button:active { transform: scale(.92); }
+.cat-acoes .editar { color: var(--tinta); background: var(--realce); }
+.cat-acoes .apagar { color: var(--saida); background: var(--perigo-bg); }
+.cat-linha.editando form { width: 100%; display: grid; gap: 10px; }
+.cat-linha.editando input, .cat-nova input { padding: 9px 12px; border: 1px solid var(--linha); border-radius: var(--raio); background: var(--campo); }
+.cat-nova { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; margin-top: 16px; }
+.cat-nova input { flex: 1 1 220px; }
+.como-aprende ol { margin: 0; padding-left: 20px; display: grid; gap: 8px; color: var(--suave); }
+.como-aprende strong { color: var(--tinta); font-weight: 600; }
+@media (max-width: 559px) {
+  .revisao li { grid-template-columns: minmax(0, 1fr) auto; }
+  .revisao li .chip-wrap { grid-column: 1 / -1; }
+  .cat-linha { flex-wrap: wrap; }
+  .cat-uso { order: 3; flex-basis: 100%; }
+  .lista-cat li { grid-template-columns: 12px minmax(0, 1fr) auto; }
+  .lc-pct { display: none; }
+  .lc-valor { min-width: 0; }
+}
+
+/* botão secundário dentro do cabeçalho de módulo (a regra geral do cabeçalho deixava ele escuro) */
+.cabecalho-modulo button.sec { background: transparent; color: var(--tinta); border: 1px solid var(--borda-forte); }
+.cabecalho-modulo button.sec:hover { background: transparent; border-color: var(--tinta); }

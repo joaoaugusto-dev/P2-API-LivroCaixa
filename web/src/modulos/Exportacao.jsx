@@ -16,9 +16,10 @@ const DICAS = {
 };
 
 // Gera o CSV aqui no navegador (sem servidor): separador ; e vírgula decimal para abrir direto no Excel
-function baixarCsv(linhas, nome) {
+function baixarCsv(linhas, nome, categorias) {
   const celula = (t) => `"${String(t).replace(/"/g, '""')}"`;
-  const corpo = ["Data;Descrição;Valor", ...linhas.map((m) => [dataCompleta(m.data), celula(m.descricao), m.valor.toFixed(2).replace(".", ",")].join(";"))].join("\r\n");
+  const nomeDe = (id) => categorias.find((c) => c.id === id)?.nome ?? "Sem categoria";
+  const corpo = ["Data;Descrição;Valor;Categoria", ...linhas.map((m) => [dataCompleta(m.data), celula(m.descricao), m.valor.toFixed(2).replace(".", ","), celula(nomeDe(m.categoria_id))].join(";"))].join("\r\n");
   const url = URL.createObjectURL(new Blob(["﻿" + corpo], { type: "text/csv;charset=utf-8" }));
   const a = Object.assign(document.createElement("a"), { href: url, download: nome + ".csv" });
   a.click();
@@ -28,7 +29,7 @@ function baixarCsv(linhas, nome) {
 // MÓDULO EXPORTAÇÃO: escolhe período, tipo e formato e baixa o arquivo.
 // OFX e Excel são gerados pela API; o CSV é gerado aqui. A caixa ao lado mostra o que será baixado.
 export default function Exportacao({ extrato }) {
-  const { movs } = extrato;
+  const { movs, categorias } = extrato;
   const [periodo, setPeriodo] = useState("tudo");
   const [de, setDe] = useState("");
   const [ate, setAte] = useState("");
@@ -93,7 +94,7 @@ export default function Exportacao({ extrato }) {
         </dl>
         {!linhas.length && !invalido && <p className="nota">Nenhuma movimentação nesse filtro. Mude o período ou o tipo.</p>}
         {formato === "csv" ? (
-          <button className="botao" disabled={!pronto} onClick={() => baixarCsv(linhas, nomeCsv)}>Baixar .csv</button>
+          <button className="botao" disabled={!pronto} onClick={() => baixarCsv(linhas, nomeCsv, categorias)}>Baixar .csv</button>
         ) : (
           <a className="botao" href={pronto ? href : undefined} download aria-disabled={!pronto}>Baixar .{formato}</a>
         )}

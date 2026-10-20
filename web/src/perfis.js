@@ -5,11 +5,12 @@ export const MODULOS = {
   insercao: "Inserção",
   exportacao: "Exportação",
   administracao: "Administração",
+  categorias: "Categorias",
 };
 
 // Cada perfil define quais módulos aparecem. O Administrador geral vê todos.
 export const PERFIS = {
-  admin: { nome: "Administrador geral", modulos: ["analise", "insercao", "exportacao", "administracao"] },
+  admin: { nome: "Administrador geral", modulos: ["analise", "insercao", "exportacao", "administracao", "categorias"] },
   analise: { nome: "Análise", modulos: ["analise"] },
   insercao: { nome: "Inserção", modulos: ["insercao"] },
   exportacao: { nome: "Exportação", modulos: ["exportacao"] },

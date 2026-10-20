@@ -10,4 +10,14 @@ export const salvar = (corpo, id) =>
 export const excluir = (id) => fetch("/api/movimentacoes/" + id, { method: "DELETE" });
 export const importar = (arquivo) => fetch("/api/importar", { method: "POST", body: arquivo });
 // Rota de download (usada como link, não como fetch)
+// CATEGORIAS: listar, criar, editar, excluir e pedir que o sistema reaprenda e reclassifique
+export const categorias = () => fetch("/api/categorias").then(json);
+const corpo = (metodo, dados) => ({ method: metodo, body: JSON.stringify(dados) });
+export const criarCategoria = (c) => fetch("/api/categorias", corpo("POST", c));
+export const editarCategoria = (id, c) => fetch("/api/categorias/" + id, corpo("PUT", c));
+export const excluirCategoria = (id) => fetch("/api/categorias/" + id, { method: "DELETE" });
+export const reclassificar = () => fetch("/api/categorias/reclassificar", { method: "POST" });
+// A pessoa escolheu (ou confirmou) a categoria de uma movimentação: o servidor aprende com isso
+export const definirCategoria = (id, categoria_id) => fetch(`/api/movimentacoes/${id}/categoria`, corpo("PUT", { categoria_id }));
+
 export const URL_EXPORTAR = "/api/exportar";

@@ -22,7 +22,7 @@ function CampoMoeda({ rotulo, valor, onChange }) {
 
 // Painel de busca e filtros. Só desenha: o estado e a lógica vêm do hook useFiltros.
 // `total` = todas as movimentações; `mostradas` = quantas passaram nos filtros.
-export default function Filtros({ filtros, total, mostradas }) {
+export default function Filtros({ filtros, total, mostradas, categorias = [] }) {
   const { f, set, limpar, ativos, avancados, invertido } = filtros;
   const busca = useRef();
   const [aberto, setAberto] = useState(false);
@@ -80,6 +80,15 @@ export default function Filtros({ filtros, total, mostradas }) {
                   <label>Até<input type="date" value={f.ate} min={f.de || undefined} onChange={(e) => set("ate", e.target.value)} /></label>
                 </div>
               )}
+            </div>
+            <div>
+              <p className="rotulo">Categoria</p>
+              <select className="sel-cat" value={String(f.categoria)} aria-label="Filtrar por categoria"
+                onChange={(e) => set("categoria", e.target.value === "todas" || e.target.value === "sem" ? e.target.value : Number(e.target.value))}>
+                <option value="todas">Todas as categorias</option>
+                <option value="sem">Sem categoria</option>
+                {categorias.map((c) => <option key={c.id} value={c.id}>{c.nome}</option>)}
+              </select>
             </div>
             <div>
               <p className="rotulo">Faixa de valor (sem o sinal)</p>

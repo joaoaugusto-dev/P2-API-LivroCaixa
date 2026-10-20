@@ -5,7 +5,7 @@ import { Girar } from "../componentes/Icones.jsx";
 
 // MÓDULO INSERÇÃO: duas formas de colocar dados no sistema: lançar à mão ou importar um arquivo .ofx.
 export default function Insercao({ extrato }) {
-  const { movs, ocupado, salvar, importar, atualizando, destaque, saindo } = extrato;
+  const { movs, ocupado, salvar, importar, atualizando, destaque, saindo, categorias, definirCategoria, criarEAtribuir } = extrato;
   const input = useRef();
   const [arrastando, setArrastando] = useState(false);
   // as 5 últimas movimentações gravadas, para a pessoa ver o resultado na hora
@@ -17,7 +17,7 @@ export default function Insercao({ extrato }) {
       <div className="duas-colunas">
         <section className="painel">
           <h2>Lançar movimentação</h2>
-          <FormMovimentacao onSalvar={(corpo) => salvar(corpo)} ocupado={ocupado} reiniciar />
+          <FormMovimentacao onSalvar={(corpo) => salvar(corpo)} ocupado={ocupado} reiniciar categorias={categorias} />
         </section>
 
         {/* área de soltar arquivo: arrastar o .ofx ou clicar para escolher; duplicadas são ignoradas */}
@@ -43,7 +43,7 @@ export default function Insercao({ extrato }) {
       {recentes.length > 0 && (
         <section className="recentes">
           <h2>Últimas inseridas</h2>
-          <Tabela movs={recentes} atualizando={atualizando} destaque={destaque} saindo={saindo} />
+          <Tabela movs={recentes} atualizando={atualizando} destaque={destaque} saindo={saindo} categorias={categorias} onCategoria={definirCategoria} onCriarCategoria={criarEAtribuir} />
         </section>
       )}
     </>

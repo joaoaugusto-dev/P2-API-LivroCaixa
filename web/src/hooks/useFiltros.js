@@ -4,7 +4,7 @@ import { faixaDe, PERIODOS } from "../periodos.js";
 import { moeda, dataCompleta, dataCurta } from "../format.js";
 
 // Estado inicial dos filtros (= nenhum filtro ligado)
-const INICIAL = { busca: "", tipo: "todas", periodo: "tudo", de: "", ate: "", min: null, max: null, ordem: "data-asc" };
+const INICIAL = { busca: "", tipo: "todas", periodo: "tudo", de: "", ate: "", min: null, max: null, categoria: "todas", ordem: "data-asc" };
 
 // Opções do seletor "Ordenar por"
 export const ORDENS = [
@@ -47,7 +47,7 @@ const ordenar = (lista, ordem) => {
 
 // HOOK DE BUSCA E FILTROS: recebe todas as movimentações e devolve o recorte filtrado.
 // Quem usa (Análise e Administração) só desenha o resultado.
-export default function useFiltros(movs) {
+export default function useFiltros(movs, categorias = []) {
   const [f, setF] = useState(INICIAL);
   // set("tipo", "saidas") atualiza um filtro; limpar() volta tudo ao inicial
   const set = (k, v) => setF((s) => ({ ...s, [k]: v }));
@@ -67,10 +67,11 @@ export default function useFiltros(movs) {
           (f.tipo === "todas" || (m.valor > 0) === (f.tipo === "entradas")) &&
           (!faixa.de || m.data >= faixa.de) && (!faixa.ate || m.data <= faixa.ate) &&
           (f.min == null || abs >= f.min / 100) && (f.max == null || abs <= f.max / 100) &&
+          (f.categoria === "todas" || (f.categoria === "sem" ? m.categoria_id == null : m.categoria_id === f.categoria)) &&
           termos.incluir.every((t) => texto.includes(t)) && !termos.excluir.some((t) => texto.includes(t))
         );
       }),
-    [movs, f.tipo, f.min, f.max, termos, faixa.de, faixa.ate]
+    [movs, f.tipo, f.min, f.max, f.categoria, termos, faixa.de, faixa.ate]
   );
   // a tabela mostra a mesma lista, na ordem escolhida pela pessoa
   const ordenadas = useMemo(() => ordenar(cronologicas, f.ordem), [cronologicas, f.ordem]);
@@ -91,10 +92,15 @@ export default function useFiltros(movs) {
       rotulo: `Valor: ${f.min != null ? moeda(f.min / 100) : "qualquer"} a ${f.max != null ? moeda(f.max / 100) : "qualquer"}`,
       remover: () => setF((s) => ({ ...s, min: null, max: null })),
     },
+    f.categoria !== "todas" && {
+      id: "categoria",
+      rotulo: `Categoria: ${f.categoria === "sem" ? "sem categoria" : categorias.find((c) => c.id === f.categoria)?.nome ?? "?"}`,
+      remover: () => set("categoria", "todas"),
+    },
   ].filter(Boolean);
 
   // quantos filtros do painel "Filtros" estão ligados (número no botão) e se algum intervalo está invertido
-  const avancados = ativos.filter((a) => a.id === "periodo" || a.id === "valor").length;
+  const avancados = ativos.filter((a) => ["periodo", "valor", "categoria"].includes(a.id)).length;
   const invertido = (faixa.de && faixa.ate && faixa.de > faixa.ate) || (f.min != null && f.max != null && f.min > f.max);
 
   return { f, set, limpar, termos, cronologicas, ordenadas, ativos, avancados, invertido };
