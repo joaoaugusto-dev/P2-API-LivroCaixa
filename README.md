@@ -97,6 +97,8 @@ python api.py                              # API em http://localhost:8000
 cd web && npm install && npm run dev       # abra http://localhost:5173
 ```
 
+> **Sem o banco configurado**, só o `main.py` (atividade básica) funciona. As outras partes avisam com uma mensagem clara (`DATABASE_URL não definida`) em vez de quebrar.
+
 ## Desafio extra: PostgreSQL
 
 A tabela `movimentacoes` é criada automaticamente. Além das colunas do enunciado, tem `fitid` (o identificador único de cada transação no OFX) com `UNIQUE`: com `ON CONFLICT DO NOTHING`, rodar `db.py` ou importar o mesmo arquivo de novo não duplica registros.

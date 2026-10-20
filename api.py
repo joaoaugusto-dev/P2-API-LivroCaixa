@@ -1,6 +1,7 @@
 """API HTTP mínima (só biblioteca padrão do Python). É a ponte entre a interface React (web/) e o banco (db.py)."""
 import io
 import json
+import os
 import re
 from datetime import date
 from decimal import Decimal
@@ -19,6 +20,18 @@ def descricao_do_filtro(de, ate, tipo):
 
 # Um "handler" por requisição: cada método do_XXX trata um verbo HTTP (GET, POST, PUT, DELETE)
 class Handler(BaseHTTPRequestHandler):
+    # Se algo der errado no meio de qualquer rota (ex.: banco fora do ar ou .env faltando), responde um erro
+    # legível em vez de derrubar a conexão sem explicação.
+    def handle_one_request(self):
+        try:
+            super().handle_one_request()
+        except Exception as erro:
+            print("Erro:", erro)
+            try:
+                self.responder({"erro": "Sem acesso ao banco de dados. Confira o DATABASE_URL no arquivo .env."}, 500)
+            except Exception:
+                pass
+
     # Resposta padrão em JSON (a interface React sempre recebe JSON, exceto nos downloads)
     def responder(self, dados, status=200):
         corpo = json.dumps(dados, default=str).encode()
@@ -193,5 +206,7 @@ class Handler(BaseHTTPRequestHandler):
 
 # `python api.py` sobe o servidor só em localhost:8000 (uma thread por requisição)
 if __name__ == "__main__":
+    if not os.environ.get("DATABASE_URL"):
+        print("Aviso: DATABASE_URL não definida. Copie .env.example para .env e preencha (veja o README).")
     print("API em http://localhost:8000")
     ThreadingHTTPServer(("localhost", 8000), Handler).serve_forever()

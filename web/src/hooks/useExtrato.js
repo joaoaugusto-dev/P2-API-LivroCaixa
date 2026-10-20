@@ -40,7 +40,7 @@ export default function useExtrato() {
           setTimeout(() => setDestaque(new Set()), 1800);
         }
       })
-      .catch(() => setErro(SEM_API))
+      .catch((e) => setErro(typeof e === "string" ? e : SEM_API)) // mensagem do servidor (ex.: sem banco) ou "API fora do ar"
       .finally(() => setAtualizando(false));
   }, []);
 

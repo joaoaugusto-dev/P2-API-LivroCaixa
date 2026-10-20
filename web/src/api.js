@@ -1,6 +1,6 @@
 // CAMADA DE API: tudo o que o front-end pede ao servidor Python passa por aqui.
-// Converte a resposta em JSON; se o servidor respondeu erro, rejeita (a tela mostra "Tentar de novo")
-const json = (r) => (r.ok ? r.json() : Promise.reject());
+// Converte a resposta em JSON; se o servidor respondeu erro, rejeita com a mensagem dele (a tela mostra "Tentar de novo")
+const json = (r) => (r.ok ? r.json() : r.json().then((d) => Promise.reject(d.erro), () => Promise.reject()));
 
 // Uma função por rota da API; os componentes nunca escrevem fetch direto
 export const listar = () => fetch("/api/movimentacoes").then(json);

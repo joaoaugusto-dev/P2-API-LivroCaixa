@@ -62,7 +62,10 @@ def _rodar(fn):
     """Executa fn(cursor) dentro de uma transação. Se a conexão do pool caiu, tenta mais uma vez."""
     global _pool
     if _pool is None:
-        _pool = ThreadedConnectionPool(1, 5, os.environ["DATABASE_URL"])
+        url = os.environ.get("DATABASE_URL")
+        if not url:  # mensagem clara em vez de um erro técnico (quem baixou o projeto ainda não criou o .env)
+            raise RuntimeError("DATABASE_URL não definida: copie .env.example para .env e preencha com a sua connection string")
+        _pool = ThreadedConnectionPool(1, 5, url)
     for tentativa in (1, 2):
         conn = _pool.getconn()
         quebrou = False
@@ -274,5 +277,8 @@ def excluir(id):
 if __name__ == "__main__":
     with open("extrato.ofx", "rb") as arquivo:
         transacoes = ler_ofx(arquivo)
-    inseridas = salvar(transacoes)
+    try:
+        inseridas = salvar(transacoes)
+    except RuntimeError as erro:  # sem .env configurado
+        raise SystemExit(f"Erro: {erro}")
     print(f"{inseridas} inseridas, {len(transacoes) - inseridas} ignoradas (duplicadas)")
