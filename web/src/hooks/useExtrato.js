@@ -3,8 +3,8 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import * as api from "../api.js";
 import { plural } from "../format.js";
 
-// Mensagem quando a API Python não responde
-const SEM_API = "Não consegui falar com a API. Rode `python api.py` na raiz do projeto.";
+// Mensagem quando a API não responde
+const SEM_API = "Não consegui falar com a API. Rode `npm run dev` na pasta backend.";
 
 // HOOK CENTRAL DE DADOS: guarda a lista de movimentações, faz criar/editar/excluir/importar
 // e controla os estados de carregamento. Todos os módulos usam este mesmo objeto.

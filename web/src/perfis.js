@@ -1,4 +1,4 @@
-// PERFIS E MÓDULOS. Atenção: os perfis só organizam a tela. Não há login, então não é controle de acesso de verdade.
+// PERFIS E MÓDULOS. As chaves (admin, analise, insercao, exportacao) são os perfis do login (ADMIN, ANALISE...) que o servidor devolve; aqui só se escolhe quais abas aparecem. O acesso de verdade é conferido pela API.
 // Nomes dos módulos (abas) da interface
 export const MODULOS = {
   analise: "Análise",

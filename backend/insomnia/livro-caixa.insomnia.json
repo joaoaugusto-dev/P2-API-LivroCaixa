@@ -1,0 +1,286 @@
+{
+  "_type": "export",
+  "__export_format": 4,
+  "__export_date": "2025-10-27T21:20:00.000Z",
+  "__export_source": "insomnia.desktop.app:v10.3.0",
+  "resources": [
+    {
+      "_id": "wrk_livrocaixa",
+      "_type": "workspace",
+      "parentId": null,
+      "name": "Livro-caixa - API (movimentações)",
+      "scope": "collection",
+      "created": 1761600000000,
+      "modified": 1761600000000,
+      "description": "# Livro-caixa — API Node.js\nColeção básica: login + CRUD de movimentações. O restante do sistema é mostrado pelo front-end.\n\n## Antes de começar\n1. Na pasta `backend`: `npm run db:seed` e `npm run dev` (API em http://localhost:3333).\n2. Em **Manage Environments**, troque `senha` pela `SEED_SENHA` do arquivo `.env`.\n\n## Como funciona\nRode o **Login** uma vez: as demais requisições usam o token dele sozinhas (o Insomnia refaz o login quando o token tem mais de 10 min).\nSiga a pasta 02 na ordem: listar → criar → editar → excluir."
+    },
+    {
+      "_id": "env_base",
+      "_type": "environment",
+      "parentId": "wrk_livrocaixa",
+      "name": "Base Environment",
+      "created": 1761600000000,
+      "modified": 1761600000000,
+      "metaSortKey": 1,
+      "isPrivate": false,
+      "data": {
+        "base_url": "http://localhost:3333/api",
+        "senha": "COLE_AQUI_A_SEED_SENHA_DO_ENV",
+        "email_admin": "admin@livrocaixa.com",
+        "email_analise": "analise@livrocaixa.com",
+        "email_insercao": "insercao@livrocaixa.com",
+        "email_exportacao": "exportacao@livrocaixa.com"
+      }
+    },
+    {
+      "_id": "fld_auth",
+      "_type": "request_group",
+      "parentId": "wrk_livrocaixa",
+      "name": "01 - Login",
+      "description": "Entra como administrador e recebe o token usado em todas as outras requisições.",
+      "environment": {},
+      "created": 1761600000000,
+      "modified": 1761600000000,
+      "metaSortKey": -999000
+    },
+    {
+      "_id": "req_login_admin",
+      "_type": "request",
+      "parentId": "fld_auth",
+      "name": "Login ADMIN",
+      "description": "**O que faz:** Entra com o usuário do perfil ADMIN e recebe o accessToken (JWT, 15 min) e o refreshToken (7 dias).\n\n**Perfil / token:** nenhum (rota pública ou propositalmente sem token)\n\n**Esperado:** 200 OK com { accessToken, refreshToken, usuario: { perfil, permissoes[] } }. A lista de permissões é o que a tela usa para mostrar só as abas do perfil.\n\n**Para explicar:** A senha foi comparada com o hash do bcrypt. O JWT é assinado com o segredo do servidor; ele carrega só o id e o perfil.",
+      "method": "POST",
+      "url": "{{ _.base_url }}/auth/login",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"email\": \"{{ _.email_admin }}\",\n  \"senha\": \"{{ _.senha }}\"\n}"
+      },
+      "parameters": [],
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "authentication": {},
+      "created": 1761600000000,
+      "modified": 1761600000000,
+      "metaSortKey": -998900,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingDisableRenderRequestBody": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "global"
+    },
+    {
+      "_id": "fld_mov",
+      "_type": "request_group",
+      "parentId": "wrk_livrocaixa",
+      "name": "02 - Movimentações (CRUD básico)",
+      "description": "Listar, criar, editar e excluir. Rode na ordem. A movimentação criada tem data 2026-12-31 para ser a última da lista; as próximas requisições a encontram sozinhas.",
+      "environment": {},
+      "created": 1761600000000,
+      "modified": 1761600000000,
+      "metaSortKey": -998000
+    },
+    {
+      "_id": "req_adm_listar",
+      "_type": "request",
+      "parentId": "fld_mov",
+      "name": "1. Listar movimentações",
+      "description": "**O que faz:** Lista todas as movimentações, da mais antiga para a mais nova.\n\n**Perfil / token:** ADMIN (login automático)\n\n**Esperado:** 200 [{ id, data, valor, descricao, categoria_id, auto, confianca }]\n\n**Para explicar:** 'auto: true' significa categoria sugerida pelo sistema, ainda não confirmada.",
+      "method": "GET",
+      "url": "{{ _.base_url }}/movimentacoes",
+      "body": {},
+      "parameters": [],
+      "headers": [],
+      "authentication": {
+        "type": "bearer",
+        "token": "{% response 'body', 'req_login_admin', 'b64::JC5hY2Nlc3NUb2tlbg==::46b', 'when-expired', 600 %}",
+        "prefix": ""
+      },
+      "created": 1761600000000,
+      "modified": 1761600000000,
+      "metaSortKey": -998800,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingDisableRenderRequestBody": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "global"
+    },
+    {
+      "_id": "req_adm_criar",
+      "_type": "request",
+      "parentId": "fld_mov",
+      "name": "2. Criar movimentação",
+      "description": "**O que faz:** Lança uma movimentação. Valor negativo = saída, positivo = entrada.\n\n**Perfil / token:** ADMIN (login automático)\n\n**Esperado:** 201 { ok: true }\n\n**Para explicar:** Sem escolher categoria, o classificador sugere uma pelas palavras da descrição. Confira com 'Listar' de novo.",
+      "method": "POST",
+      "url": "{{ _.base_url }}/movimentacoes",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"data\": \"2026-12-31\",\n  \"valor\": -189.9,\n  \"descricao\": \"Energia eletrica - demonstracao\"\n}"
+      },
+      "parameters": [],
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "authentication": {
+        "type": "bearer",
+        "token": "{% response 'body', 'req_login_admin', 'b64::JC5hY2Nlc3NUb2tlbg==::46b', 'when-expired', 600 %}",
+        "prefix": ""
+      },
+      "created": 1761600000000,
+      "modified": 1761600000000,
+      "metaSortKey": -998700,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingDisableRenderRequestBody": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "global"
+    },
+    {
+      "_id": "req_adm_editar",
+      "_type": "request",
+      "parentId": "fld_mov",
+      "name": "3. Editar movimentação (a última)",
+      "description": "**O que faz:** Corrige o valor da movimentação criada no passo 2 (o id é descoberto sozinho).\n\n**Perfil / token:** ADMIN (login automático)\n\n**Esperado:** 200 { ok: true }\n\n**Para explicar:** Os dados passam por validação: data real, valor numérico e descrição de até 255 caracteres.",
+      "method": "PUT",
+      "url": "{{ _.base_url }}/movimentacoes/{% response 'body', 'req_adm_listar', 'b64::JFstMTpdLmlk::46b', 'always', 60 %}",
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"data\": \"2026-12-31\",\n  \"valor\": -199.9,\n  \"descricao\": \"Energia eletrica - demonstracao\"\n}"
+      },
+      "parameters": [],
+      "headers": [
+        {
+          "name": "Content-Type",
+          "value": "application/json"
+        }
+      ],
+      "authentication": {
+        "type": "bearer",
+        "token": "{% response 'body', 'req_login_admin', 'b64::JC5hY2Nlc3NUb2tlbg==::46b', 'when-expired', 600 %}",
+        "prefix": ""
+      },
+      "created": 1761600000000,
+      "modified": 1761600000000,
+      "metaSortKey": -998600,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingDisableRenderRequestBody": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "global"
+    },
+    {
+      "_id": "req_adm_excluir",
+      "_type": "request",
+      "parentId": "fld_mov",
+      "name": "4. Excluir movimentação (a última)",
+      "description": "**O que faz:** Apaga a movimentação criada no passo 2.\n\n**Perfil / token:** ADMIN (login automático)\n\n**Esperado:** 200 { ok: true }\n\n**Para explicar:** Deixa o banco como estava antes da demonstração.",
+      "method": "DELETE",
+      "url": "{{ _.base_url }}/movimentacoes/{% response 'body', 'req_adm_listar', 'b64::JFstMTpdLmlk::46b', 'always', 60 %}",
+      "body": {},
+      "parameters": [],
+      "headers": [],
+      "authentication": {
+        "type": "bearer",
+        "token": "{% response 'body', 'req_login_admin', 'b64::JC5hY2Nlc3NUb2tlbg==::46b', 'when-expired', 600 %}",
+        "prefix": ""
+      },
+      "created": 1761600000000,
+      "modified": 1761600000000,
+      "metaSortKey": -998500,
+      "isPrivate": false,
+      "settingStoreCookies": true,
+      "settingSendCookies": true,
+      "settingDisableRenderRequestBody": false,
+      "settingEncodeUrl": true,
+      "settingRebuildPath": true,
+      "settingFollowRedirects": "global"
+    },
+    {
+      "_id": "uts_auth",
+      "_type": "unit_test_suite",
+      "parentId": "wrk_livrocaixa",
+      "name": "01 - Login",
+      "created": 1761600000000,
+      "modified": 1761600000000,
+      "metaSortKey": 100
+    },
+    {
+      "_id": "ut_login_admin",
+      "_type": "unit_test",
+      "parentId": "uts_auth",
+      "name": "Login ADMIN",
+      "code": "const resposta = await insomnia.send();\nexpect(resposta.status).to.equal(200);\nconst c = JSON.parse(resposta.data);\nexpect(c.accessToken).to.be.a('string');\nexpect(c.usuario.perfil).to.equal('ADMIN');",
+      "requestId": "req_login_admin",
+      "created": 1761600000000,
+      "modified": 1761600000000,
+      "metaSortKey": 100
+    },
+    {
+      "_id": "uts_mov",
+      "_type": "unit_test_suite",
+      "parentId": "wrk_livrocaixa",
+      "name": "02 - Movimentações (CRUD básico)",
+      "created": 1761600000000,
+      "modified": 1761600000000,
+      "metaSortKey": 200
+    },
+    {
+      "_id": "ut_adm_listar",
+      "_type": "unit_test",
+      "parentId": "uts_mov",
+      "name": "1. Listar movimentações",
+      "code": "const resposta = await insomnia.send();\nexpect(resposta.status).to.equal(200);\nexpect(JSON.parse(resposta.data)).to.be.an('array');",
+      "requestId": "req_adm_listar",
+      "created": 1761600000000,
+      "modified": 1761600000000,
+      "metaSortKey": 100
+    },
+    {
+      "_id": "ut_adm_criar",
+      "_type": "unit_test",
+      "parentId": "uts_mov",
+      "name": "2. Criar movimentação",
+      "code": "const resposta = await insomnia.send();\nexpect(resposta.status).to.equal(201);",
+      "requestId": "req_adm_criar",
+      "created": 1761600000000,
+      "modified": 1761600000000,
+      "metaSortKey": 200
+    },
+    {
+      "_id": "ut_adm_editar",
+      "_type": "unit_test",
+      "parentId": "uts_mov",
+      "name": "3. Editar movimentação (a última)",
+      "code": "const resposta = await insomnia.send();\nexpect(resposta.status).to.equal(200);",
+      "requestId": "req_adm_editar",
+      "created": 1761600000000,
+      "modified": 1761600000000,
+      "metaSortKey": 300
+    },
+    {
+      "_id": "ut_adm_excluir",
+      "_type": "unit_test",
+      "parentId": "uts_mov",
+      "name": "4. Excluir movimentação (a última)",
+      "code": "const resposta = await insomnia.send();\nexpect(resposta.status).to.equal(200);",
+      "requestId": "req_adm_excluir",
+      "created": 1761600000000,
+      "modified": 1761600000000,
+      "metaSortKey": 400
+    }
+  ]
+}

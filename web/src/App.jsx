@@ -1,6 +1,8 @@
-// APLICAÇÃO PRINCIPAL: casca da página. Escolhe o perfil, mostra as abas e renderiza o módulo ativo.
+// APLICAÇÃO PRINCIPAL: casca da página. Pede o login, mostra as abas do perfil de quem entrou e renderiza o módulo ativo.
 import { useEffect, useState } from "react";
 import useExtrato from "./hooks/useExtrato.js";
+import { definirAoExpirar, sair, sessao } from "./api.js";
+import Login from "./modulos/Login.jsx";
 import Esqueleto from "./componentes/Esqueleto.jsx";
 import { Logo } from "./componentes/Icones.jsx";
 import { MODULOS, PERFIS } from "./perfis.js";
@@ -51,17 +53,22 @@ function BotaoTema() {
   );
 }
 
-// Lê o último perfil escolhido (salvo no navegador); se não houver, começa como Administrador
-const lerPerfil = () => {
-  try { return localStorage.getItem("perfil") in PERFIS ? localStorage.getItem("perfil") : "admin"; } catch { return "admin"; }
-};
-
-// Componente raiz: topo (logo, perfil, tema), abas, avisos e o módulo ativo
+// Raiz: sem sessão mostra o login; com sessão mostra o painel. O painel só monta depois do login,
+// assim nenhum dado é pedido à API antes de a pessoa entrar.
 export default function App() {
+  const [usuario, setUsuario] = useState(() => sessao.ler()?.usuario ?? null);
+  // se a sessão expirar de vez (token de renovação vencido), volta para o login
+  useEffect(() => { definirAoExpirar(() => setUsuario(null)); }, []);
+  return usuario ? <Painel usuario={usuario} aoSair={() => { sair(); setUsuario(null); }} /> : <Login aoEntrar={setUsuario} />;
+}
+
+// Painel: topo (logo, usuário, tema), abas, avisos e o módulo ativo
+function Painel({ usuario, aoSair }) {
   // todos os dados e operações vêm deste hook e são repassados aos módulos
   const extrato = useExtrato();
   const { movs, erro, setErro, aviso, carregar, demora } = extrato;
-  const [perfil, setPerfil] = useState(lerPerfil);
+  // o perfil vem do servidor (ADMIN, ANALISE, INSERCAO, EXPORTACAO), não é mais escolhido na tela
+  const perfil = usuario.perfil.toLowerCase();
   const [modulo, setModulo] = useState(PERFIS[perfil].modulos[0]);
   const [trocou, setTrocou] = useState(false); // anima o modulo so quando o usuario troca de aba
   const [inicio, setInicio] = useState(false); // so a primeira chegada dos dados anima em sequencia
@@ -70,14 +77,6 @@ export default function App() {
   const modulos = PERFIS[perfil].modulos;
   const ativo = modulos.includes(modulo) ? modulo : modulos[0];
   const Tela = TELAS[ativo];
-
-  // trocar de perfil recarrega as abas permitidas e abre a primeira
-  const trocarPerfil = (p) => {
-    setPerfil(p);
-    setTrocou(true);
-    setModulo(PERFIS[p].modulos[0]);
-    try { localStorage.setItem("perfil", p); } catch {}
-  };
 
   // liga a animação de entrada só por 1,6 s depois que os dados chegam pela 1ª vez
   useEffect(() => {
@@ -92,7 +91,7 @@ export default function App() {
 
   return (
     <div className={"pagina" + (inicio ? " inicio" : "")}>
-      {/* TOPO: logo, seletor de perfil e botão de tema */}
+      {/* TOPO: logo, quem está logado, Sair e botão de tema */}
       <header className="topo">
         <div className="marca">
           <Logo />
@@ -102,12 +101,8 @@ export default function App() {
           </div>
         </div>
         <div className="topo-direita">
-          <label className="perfil">
-            Perfil
-            <select value={perfil} onChange={(e) => trocarPerfil(e.target.value)}>
-              {Object.entries(PERFIS).map(([id, p]) => <option key={id} value={id}>{p.nome}</option>)}
-            </select>
-          </label>
+          <span className="perfil">{usuario.nome} · {PERFIS[perfil].nome}</span>
+          <button type="button" className="sec" onClick={aoSair}>Sair</button>
           <BotaoTema />
         </div>
       </header>

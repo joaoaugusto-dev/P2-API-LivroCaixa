@@ -1,6 +1,6 @@
 // MÓDULO EXPORTAÇÃO: baixar o extrato em OFX, CSV ou Excel, com período e tipo.
 import { useMemo, useState } from "react";
-import { URL_EXPORTAR } from "../api.js";
+import { baixar } from "../api.js";
 import Segmentos from "../componentes/Segmentos.jsx";
 import { PERIODOS, faixaDe } from "../periodos.js";
 import { moeda, dataCompleta } from "../format.js";
@@ -57,9 +57,10 @@ export default function Exportacao({ extrato }) {
   const soma = (f) => linhas.filter(f).reduce((s, m) => s + m.valor, 0);
   const pronto = linhas.length > 0 && !invalido;
 
-  // monta o link de download com os filtros na URL (?de=...&ate=...&tipo=...&formato=...)
-  const params = new URLSearchParams({ ...(formato === "xlsx" && { formato }), ...(faixa.de && { de: faixa.de }), ...(faixa.ate && { ate: faixa.ate }), ...(tipo !== "todas" && { tipo }) });
-  const href = URL_EXPORTAR + (params.size ? "?" + params : "");
+  // filtros enviados à API (a API exige o login, por isso o download passa por baixar() e não por um link)
+  const params = { ...(faixa.de && { de: faixa.de }), ...(faixa.ate && { ate: faixa.ate }), ...(tipo !== "todas" && { tipo }) };
+  const [falha, setFalha] = useState("");
+  const baixarArquivo = () => { setFalha(""); baixar(params, formato).catch((e) => setFalha(e.message)); };
   // nome do arquivo (inclui período e tipo)
   const nomeCsv = ["extrato", faixa.de, faixa.ate, tipo !== "todas" && tipo].filter(Boolean).join("-");
 
@@ -103,8 +104,9 @@ export default function Exportacao({ extrato }) {
         {formato === "csv" ? (
           <button className="botao" disabled={!pronto} onClick={() => baixarCsv(linhas, nomeCsv, categorias)}>Baixar .csv</button>
         ) : (
-          <a className="botao" href={pronto ? href : undefined} download aria-disabled={!pronto}>Baixar .{formato}</a>
+          <button className="botao" disabled={!pronto} onClick={baixarArquivo}>Baixar .{formato}</button>
         )}
+        {falha && <p className="erro" role="alert">{falha}</p>}
       </aside>
     </div>
   );

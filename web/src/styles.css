@@ -689,3 +689,9 @@ button.chip-cat:active { transform: scale(.96); }
   .hero-saldo { position: relative; }
   .hero-saldo .grafico-topo { position: absolute; top: 0; right: 0; margin: 0; }
 }
+
+/* LOGIN e usuário logado no topo */
+.login { display: grid; place-items: center; min-height: 100vh; }
+.login .painel { width: min(100%, 380px); }
+.login .marca { margin-bottom: 20px; }
+.perfil { white-space: nowrap; }
