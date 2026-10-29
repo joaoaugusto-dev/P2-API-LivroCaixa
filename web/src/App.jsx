@@ -1,8 +1,9 @@
 // APLICAÇÃO PRINCIPAL: casca da página. Pede o login, mostra as abas do perfil de quem entrou e renderiza o módulo ativo.
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import useExtrato from "./hooks/useExtrato.js";
 import { definirAoExpirar, sair, sessao } from "./api.js";
 import Login from "./modulos/Login.jsx";
+import TrocarSenha from "./modulos/TrocarSenha.jsx";
 import Esqueleto from "./componentes/Esqueleto.jsx";
 import { Logo } from "./componentes/Icones.jsx";
 import { MODULOS, PERFIS } from "./perfis.js";
@@ -70,6 +71,7 @@ function Painel({ usuario, aoSair }) {
   // o perfil vem do servidor (ADMIN, ANALISE, INSERCAO, EXPORTACAO), não é mais escolhido na tela
   const perfil = usuario.perfil.toLowerCase();
   const [modulo, setModulo] = useState(PERFIS[perfil].modulos[0]);
+  const dialogoSenha = useRef();
   const [trocou, setTrocou] = useState(false); // anima o modulo so quando o usuario troca de aba
   const [inicio, setInicio] = useState(false); // so a primeira chegada dos dados anima em sequencia
 
@@ -91,6 +93,7 @@ function Painel({ usuario, aoSair }) {
 
   return (
     <div className={"pagina" + (inicio ? " inicio" : "")}>
+      <TrocarSenha ref={dialogoSenha} email={usuario.email} />
       {/* TOPO: logo, quem está logado, Sair e botão de tema */}
       <header className="topo">
         <div className="marca">
@@ -102,6 +105,7 @@ function Painel({ usuario, aoSair }) {
         </div>
         <div className="topo-direita">
           <span className="perfil">{usuario.nome} · {PERFIS[perfil].nome}</span>
+          <button type="button" className="sec" onClick={() => dialogoSenha.current.showModal()}>Trocar senha</button>
           <button type="button" className="sec" onClick={aoSair}>Sair</button>
           <BotaoTema />
         </div>

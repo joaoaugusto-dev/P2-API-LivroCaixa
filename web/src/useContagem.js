@@ -13,7 +13,7 @@ export default function useContagem(alvo, ms = 900) {
     let id;
     // a cada quadro da tela, calcula quanto do caminho já foi percorrido (p vai de 0 a 1)
     const passo = (t) => {
-      const p = Math.min((t - t0) / ms, 1);
+      const p = Math.min(Math.max((t - t0) / ms, 0), 1);
       atual.current = de + (alvo - de) * (1 - Math.pow(1 - p, 4));
       setV(atual.current);
       if (p < 1) id = requestAnimationFrame(passo);

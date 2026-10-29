@@ -51,6 +51,14 @@ export async function sair() {
   if (refreshToken) await fetch("/api/auth/logout", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ refreshToken }) }).catch(() => {});
 }
 
+// Troca a senha de quem está logado. O servidor derruba todas as sessões, então entramos de novo para ter tokens novos.
+export async function trocarSenha(email, senhaAtual, senhaNova) {
+  const r = await requisitar("/api/auth/trocar-senha", corpo("POST", { senhaAtual, senhaNova }));
+  const dados = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error(dados.erro || "Não consegui trocar a senha.");
+  await entrar(email, senhaNova);
+}
+
 // Monta as opções de um fetch com corpo JSON
 const corpo = (metodo, dados) => ({ method: metodo, headers: { "Content-Type": "application/json" }, body: JSON.stringify(dados) });
 

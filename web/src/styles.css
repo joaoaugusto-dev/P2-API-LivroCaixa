@@ -690,8 +690,85 @@ button.chip-cat:active { transform: scale(.96); }
   .hero-saldo .grafico-topo { position: absolute; top: 0; right: 0; margin: 0; }
 }
 
-/* LOGIN e usuário logado no topo */
-.login { display: grid; place-items: center; min-height: 100vh; }
-.login .painel { width: min(100%, 380px); }
-.login .marca { margin-bottom: 20px; }
+/* LOGIN: à esquerda um livro-caixa de exemplo que se escreve sozinho; à direita o formulário. No celular só sobra o cabeçalho */
+.login { display: grid; grid-template-columns: minmax(0, 1.15fr) minmax(360px, 1fr); min-height: 100vh; --alt-linha: 56px; }
+.livro { background: var(--hero); color: #fff; padding: 40px clamp(24px, 5vw, 72px); display: flex; flex-direction: column; overflow: hidden; position: relative; }
+
+.livro-topo { display: flex; align-items: center; gap: 12px; font: 700 1.15rem/1 var(--titulo); }
+.livro-topo .logo { width: 34px; height: 34px; }
+.livro-topo .logo rect { fill: rgb(255 255 255 / .1); }
+.livro h1 { font: 700 clamp(2rem, 3.4vw, 3.1rem)/1.05 var(--titulo); letter-spacing: -0.025em; margin: clamp(32px, 7vh, 80px) 0 28px; }
+.livro-linhas { list-style: none; margin: 0; padding: 0; position: relative; height: calc(var(--alt-linha) * 5); max-width: 560px;
+  background: repeating-linear-gradient(to bottom, transparent 0 calc(var(--alt-linha) - 1px), rgb(255 255 255 / .14) calc(var(--alt-linha) - 1px) var(--alt-linha)); }
+.livro-linhas li { position: absolute; inset: 0 0 auto 0; height: var(--alt-linha); display: flex; align-items: center; justify-content: space-between; gap: 16px;
+  transform: translateY(calc(var(--pos) * var(--alt-linha))); transition: transform 520ms var(--ease-out), opacity 360ms var(--ease-out);
+  animation: lancar 560ms var(--ease-out) var(--atraso) backwards; }
+.livro-linhas li:last-child { opacity: 0; }
+.livro-linhas span { color: #fff; }
+.livro-linhas li:nth-child(2) { opacity: .92; } .livro-linhas li:nth-child(3) { opacity: .8; } .livro-linhas li:nth-child(4) { opacity: .66; } .livro-linhas li:nth-child(5) { opacity: .55; }
+.livro-linhas b { font: 500 1.1rem/1 var(--mono); }
+.livro-linhas .l-ent b { color: var(--entrada-clara); }
+.livro-linhas .l-sai b { color: var(--saida-clara); }
+/* a linha nova entra grande e vinda de cima, desacelerando (nada cresce do zero) */
+@keyframes lancar { from { opacity: 0; transform: translateY(calc(var(--pos) * var(--alt-linha) - 22px)) scale(1.04); } }
+.livro-saldo { margin-top: auto; padding-top: 32px; max-width: 560px; }
+.livro-saldo small { display: block; opacity: .65; font-size: .85rem; }
+.livro-saldo strong { display: block; font: 500 clamp(1.8rem, 3vw, 2.6rem)/1.2 var(--mono); letter-spacing: -0.02em; font-variant-numeric: tabular-nums; }
+.degraus { display: block; width: 100%; height: auto; margin-top: 12px; overflow: visible; }
+.degraus path { fill: none; stroke: var(--ouro); stroke-width: 3; stroke-linejoin: miter; stroke-dasharray: 1; transition: d 700ms var(--ease-out); animation: desenhar 1500ms var(--ease-out) 700ms backwards; }
+.degraus circle { fill: var(--ouro); transition: transform 700ms var(--ease-out); }
+@keyframes desenhar { from { stroke-dashoffset: 1; } }
+
+.login-form { align-self: center; justify-self: center; width: min(100%, 380px); padding: 32px 24px; animation: form-chega 520ms var(--ease-out) 250ms backwards; transition: opacity 260ms var(--ease-in-out), transform 260ms var(--ease-in-out); }
+@keyframes form-chega { from { opacity: 0; transform: translateX(18px); } }
+.login.saindo .login-form { opacity: 0; transform: translateX(-24px); }
+.login-form h2 { font: 700 1.6rem/1.2 var(--titulo); margin: 0; }
+.login-sub { color: var(--suave); margin: 4px 0 24px; }
+.login-form .erro { animation: erro-entra 260ms var(--ease-out); }
+@keyframes erro-entra { from { opacity: 0; transform: translateY(-6px); } }
+.login-form label { display: block; font-weight: 500; margin-bottom: 16px; }
+.login-form input { display: block; width: 100%; margin-top: 4px; padding: 11px 12px; border: 1px solid var(--linha); border-radius: var(--raio); background: var(--campo); transition: border-color 150ms, box-shadow 150ms; }
+.login-form input:focus-visible { outline: 0; border-color: var(--primario); box-shadow: 0 0 0 3px color-mix(in srgb, var(--ouro) 55%, transparent); }
+.campo { display: block; position: relative; }
+.campo input { padding-right: 46px; }
+.campo-fim { position: absolute; right: 6px; bottom: 6px; width: 34px; height: 34px; display: grid; place-items: center; }
+.certo { color: var(--entrada); pointer-events: none; }
+.certo path { stroke-dasharray: 1; stroke-dashoffset: 1; transition: stroke-dashoffset 320ms var(--ease-out); }
+.certo.ativo path { stroke-dashoffset: 0; }
+.login-form label { transition: color 150ms; }
+.login-form label:focus-within { color: var(--primario); }
+:root[data-tema="escuro"] .login-form label:focus-within { color: var(--ouro); }
+.dica-caps { display: block; font-size: .85rem; font-weight: 500; color: var(--erro-tx); max-height: 0; opacity: 0; transform: translateY(-4px); overflow: hidden; transition: max-height 200ms var(--ease-out), opacity 200ms var(--ease-out), transform 200ms var(--ease-out), margin 200ms var(--ease-out); }
+.dica-caps.ativo { max-height: 1.6em; opacity: 1; transform: none; margin-top: 6px; }
+/* botão do olho: redondo, afunda ao apertar */
+.olho-botao { border: 0; border-radius: 50%; background: transparent; color: var(--suave); cursor: pointer; padding: 0; transition: background-color 150ms, color 150ms, transform 120ms var(--ease-out); }
+.olho-botao:hover { background: var(--realce); color: var(--tinta); --vao: var(--realce); }
+.olho-botao:active { transform: scale(.88); }
+.olho-botao:focus-visible { outline: 2px solid var(--primario); outline-offset: 1px; }
+/* olho: risco desenhado = senha escondida; sem risco = visível */
+.olho path, .olho circle { transform-box: fill-box; transform-origin: center; }
+.olho-vao { stroke: var(--vao, var(--campo)); stroke-width: 5; stroke-dasharray: 1; stroke-dashoffset: 0; transition: stroke-dashoffset 280ms var(--ease-out); }
+.olho-barra { stroke-dasharray: 1; stroke-dashoffset: 0; transition: stroke-dashoffset 280ms var(--ease-out) 40ms; }
+.olho.visivel .olho-vao, .olho.visivel .olho-barra { stroke-dashoffset: 1; }
+.olho-corpo { transform-box: fill-box; transform-origin: center; }
+.olho-pupila { fill: currentColor; transform: scale(.55); opacity: .55; transition: transform 320ms var(--ease-out), opacity 200ms; }
+.olho.visivel .olho-pupila { transform: none; opacity: 1; }
+.olho-olhar { transition: transform 120ms var(--ease-out); }
+.olho.visivel { color: var(--primario); }
+:root[data-tema="escuro"] .olho.visivel { color: var(--ouro); }
+.olho.piscando .olho-corpo { animation: piscar 240ms var(--ease-in-out); }
+@keyframes piscar { 45% { transform: scaleY(.08); } }
+.livro-linhas li:hover { background: rgb(255 255 255 / .05); }
+.login-form .botao { width: 100%; justify-content: center; padding: 12px 18px; margin-top: 8px; }
+.login-ajuda { color: var(--suave); font-size: .85rem; margin: 16px 0 0; }
+@media (max-width: 859px) {
+  .login { grid-template-columns: 1fr; grid-template-rows: auto 1fr; min-height: 100svh; }
+  .livro { padding: 24px; }
+  .livro h1 { font-size: 1.6rem; margin: 20px 0 0; }
+  .livro-linhas, .livro-saldo { display: none; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .livro-linhas li, .degraus path, .degraus circle, .login-form, .olho *, .dica-caps, .certo path { animation: none !important; transition: none !important; }
+}
+.ok { background: var(--confirma-bg); padding: 10px 14px; border-radius: var(--raio); margin: 0; }
 .perfil { white-space: nowrap; }
